@@ -1,17 +1,14 @@
 # homepage_v2
 
-Homepage
+A portfolio presented as an interactive space map, built with Flutter for the web.
 
-## Getting Started
+`docs/architecture.md` explains how the site is put together and why.
 
-This project is a starting point for a Flutter application.
+## Running it
 
-A few resources to get you started if this is your first Flutter project:
+Needs Flutter 3.47 or later.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter run -d chrome   # serve the site locally and open it in Chrome
+flutter test            # run the tests
+```
