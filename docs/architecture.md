@@ -89,6 +89,9 @@ lib/
   overlay/     labels, brackets, beacons, orbit lines
   ui/          sidebar, message card, list view, HUD
   debug/       debug panel and query flags, kept apart from the rest
+  router.dart  the routes, and where a bad URL goes
+  providers.dart
+               providers for content/ and space/
 shaders/       scene.frag and its includes
 ```
 
@@ -152,6 +155,9 @@ enforces the boundary.
   - `/list` is the list view. A category's slug can't be `list`, nor
     `assets`, `canvaskit` or `packages`: `flutter run` handles paths under
     those itself instead of loading the app.
+  - URLs are paths (`/projects`), not Flutter web's default `/#/projects`.
+  - A bad URL goes to the nearest page above it: `/projects/nope` to
+    `/projects`, `/nope` to `/`.
   - The browser's back button follows the same states as Esc.
   - Links are shareable.
   - Route changes move the camera; pages don't transition.
