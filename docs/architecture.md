@@ -112,7 +112,7 @@ enforces the boundary.
    - Uniforms are set through one typed layout class, never as
      `setFloat(34 + i, ...)`.
 3. **Content is separate from looks.** What a body says is content. Where it
-   orbits how it's drawn are settings.
+   orbits and how it's drawn are settings.
    - Categories and messages have explicit slugs, so URLs don't change when
      the copy does.
    - Flat placeholders act as the fake renderer. Navigation, content,
@@ -149,7 +149,9 @@ enforces the boundary.
   - `/` is the overview.
   - `/projects` focuses that body.
   - `/projects/project-01` is warped to its beacon, with the message open.
-  - `/list` is the list view; route names like `list` are reserved slugs.
+  - `/list` is the list view. A category's slug can't be `list`, nor
+    `assets`, `canvaskit` or `packages`: `flutter run` handles paths under
+    those itself instead of loading the app.
   - The browser's back button follows the same states as Esc.
   - Links are shareable.
   - Route changes move the camera; pages don't transition.
