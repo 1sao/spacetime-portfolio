@@ -191,27 +191,44 @@ almost none of the site's words. Flutter's own guidance
 Optimization (SEO)") recommends separate HTML for content pages, or Jaspr, a
 DOM-based Dart framework.
 
-This site uses a plain-HTML summary in `web/index.html`, inside Google's
-spam policies
+- **Link previews:** `web/index.html` has a `<title>`, a
+  `<meta name="description">` and Open Graph tags. Slack, LinkedIn and
+  messengers read only these and never run JavaScript. X reads the Open
+  Graph title, description and image when its own tags are missing, so
+  `twitter:card` is the only X tag. Flutter replaces the tab's title with
+  `MaterialApp.title` once it starts, so `App.title` repeats the `<title>`.
+  Tests keep the tags, the manifest, the title and the background colour
+  in agreement.
+- **The page's text:** postponed. The approach is a plain-HTML summary in
+  `index.html`: the loading screen while Flutter starts, the whole page
+  without JavaScript, and kept in the DOM afterwards for search engines and
+  screen readers. Crawlers differ in what they read:
+  - Google queues every page that loads (HTTP 200) for rendering in headless
+    Chromium and indexes the rendered HTML
+    (<https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics>),
+    so text removed or hidden once Flutter starts may drop out of its index.
+    Its renderer has no WebGL
+    (<https://developers.google.com/search/docs/crawling-indexing/javascript/fix-search-javascript>),
+    and whether Flutter's software fallback starts there is untested.
+  - OpenAI's, Anthropic's and Perplexity's crawlers fetch the HTML without
+    running JavaScript (<https://vercel.com/blog/the-rise-of-the-ai-crawler>,
+    December 2024), so they read only what `index.html` holds.
+
+  Hidden text breaks the browser's find-in-page:
+  - Visually hidden (1 px and clipped), it is found, but there is nothing
+    visible to highlight.
+  - With the summary `display: none` and Flutter's semantics tree switched
+    on at start-up, Chrome finds Flutter's text but neither highlights nor
+    scrolls to it.
+
+  This waits for <https://github.com/flutter/rfc/pull/35>.
+
+Whatever text is added has to stay inside Google's spam policies
 (<https://developers.google.com/search/docs/essentials/spam-policies>),
 which forbid cloaking (different content for crawlers) and hidden text
-placed only for search engines, while allowing screen-reader text. So:
-
-- **Everyone gets the same HTML.** No user-agent checks and no separate
-  page for bots.
-- **It says what the site says:** the name, the role, a short bio, the
-  projects' one-line summaries, and the contact links. No keyword lists and
-  nothing the app doesn't show.
-- **People can actually reach it:**
-  - It is the loading screen while Flutter starts.
-  - It is the whole page when JavaScript is off.
-  - It stays in the DOM afterwards as screen-reader text, because Flutter's
-    own accessibility tree is off until a user turns it on. Google indexes
-    the page after running its JavaScript, so removing the text once
-    Flutter starts would remove it from the index too.
-- **Link previews:** `<title>`, `<meta name="description">` and Open Graph /
-  Twitter card tags. Slack, LinkedIn and messengers read only these and
-  never run JavaScript.
+placed only for search engines, while allowing screen-reader text. So
+everyone gets the same HTML, with no user-agent checks, and it says only
+what the site says.
 
 A Jaspr site with the Flutter scene embedded would index better, but it is
 two frameworks, and the overlays are tied to the scene. It is worth it only

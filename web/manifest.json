@@ -1,12 +1,11 @@
 {
-    "name": "homepage_v2",
-    "short_name": "homepage_v2",
+    "name": "[Name placeholder] – [Role placeholder]",
+    "short_name": "[Name placeholder]",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Homepage",
-    "orientation": "portrait-primary",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "description": "[Description placeholder]",
     "prefer_related_applications": false,
     "icons": [
         {

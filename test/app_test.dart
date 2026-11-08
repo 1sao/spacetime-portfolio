@@ -15,4 +15,14 @@ void main() {
     );
     expect(surface.color, App.background);
   });
+
+  testWidgets('the app gives the browser its title and background colour', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: App()));
+
+    final title = tester.widget<Title>(find.byType(Title));
+    expect(title.title, App.title);
+    expect(title.color, App.background);
+  });
 }

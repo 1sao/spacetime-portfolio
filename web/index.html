@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,19 +18,33 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Homepage">
+  <meta name="description" content="[Description placeholder]">
+  <meta name="theme-color" content="#000000">
+
+  <!-- Link previews -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="[Name placeholder] – [Role placeholder]">
+  <meta property="og:description" content="[Description placeholder]">
+  <meta name="twitter:card" content="summary">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="homepage_v2">
+  <meta name="apple-mobile-web-app-title" content="[Name placeholder]">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>homepage_v2</title>
+  <title>[Name placeholder] – [Role placeholder]</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Black from the start, so the page doesn't flash white before Flutter's first frame. -->
+  <style>
+    html, body {
+      background: #000000;
+    }
+  </style>
 </head>
 <body>
   <!--
