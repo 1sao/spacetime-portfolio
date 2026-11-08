@@ -1,0 +1,23 @@
+import 'package:vector_math/vector_math_64.dart';
+
+import 'orbit.dart';
+
+/// A category's body: a sphere that moves along an orbit round the central
+/// body.
+class Body {
+  const Body({required this.orbit, required this.phase, required this.radius});
+
+  /// The circle the body's centre moves along.
+  final Orbit orbit;
+
+  /// Where along [orbit] the body is at time 0, as an angle in rad (see
+  /// [Orbit.pointAt]). Bodies that share an orbit are kept apart by their
+  /// phases.
+  final double phase;
+
+  /// The sphere's radius, in world units.
+  final double radius;
+
+  Vector3 positionAt(double seconds) =>
+      orbit.pointAt(phase + orbit.angularSpeed * seconds);
+}

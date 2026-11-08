@@ -57,7 +57,10 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [contentProvider.overrideWithValue(fakeContent)],
+        overrides: [
+          contentProvider.overrideWithValue(fakeContent),
+          bodiesProvider.overrideWithValue(fakeBodies),
+        ],
         child: const App(),
       ),
     );
@@ -70,7 +73,8 @@ void main() {
       ('/projects/two', projects, projects.messages[1]),
     ]) {
       router.go(path);
-      await tester.pumpAndSettle();
+      // The scene ticks every frame, so the map page never settles.
+      await tester.pump();
 
       final map = tester.widget<MapPage>(find.byType(MapPage));
       expect(tester.element(find.byType(MapPage)), same(page), reason: path);

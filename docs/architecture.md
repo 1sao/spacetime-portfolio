@@ -2,10 +2,11 @@
 
 ## What the site is
 
-A portfolio presented as an interactive space map. A black hole sits at the centre and
-bodies orbit it. Each body is a content category (projects, experience,
-contact) and holds one beacon per message. Messages first show in an alien
-glyph script and scramble into readable text when opened.
+A portfolio presented as an interactive space map. A black hole, the
+central body, sits at the centre and bodies orbit it. Each body is a content
+category (projects, experience, contact) and holds one beacon per message.
+Messages first show in an alien glyph script and scramble into readable text
+when opened.
 
 - **Overview:** the farthest view. The camera orbits the hole slowly; drag to
   orbit, scroll to zoom.
@@ -80,8 +81,8 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
 ```
 lib/
   content/     categories and messages: data only
-  space/       pure Dart, no Flutter imports: vectors, orbits, the camera
-               rig, light bending, projection
+  space/       pure Dart, no Flutter imports: orbits, the camera rig, light
+               bending, projection, the per-frame snapshot
   navigation/  overview, focus, warp and the flights between them, as a
                Riverpod Notifier over a sealed state class
   scene/       the shader wrapper, a typed uniform layout, quality tiers,
@@ -104,7 +105,9 @@ enforces the boundary.
 1. **Compute each frame once.** One immutable snapshot per tick holds the
    camera, the body positions and the time. The shader's uniforms and every
    overlay read that same snapshot. When each painter recomputes what it
-   needs from shared mutable fields, overlays drift from the shader.
+   needs from shared mutable fields, overlays drift from the shader. The
+   snapshot's vectors are `vector_math` objects, which are mutable, so
+   nothing changes them in place.
 2. **The shader and its CPU tracer change together.**
    - One `Bend` (light-bending) model in `space/` defines the rule; the
      shader's includes implement the same rule, and a change to one is a
@@ -112,12 +115,22 @@ enforces the boundary.
    - A render test draws the scene with flat placeholders, finds each
      body's colour in the pixels, and checks that the CPU projection lands
      on it. Flutter can render a `FragmentProgram` inside `flutter test`.
+     Perspective draws a sphere off the view axis as an ellipse centred
+     further out than its projected centre, by pixels close up, so the test
+     works out the ellipse's centre from the projection.
    - Uniforms are set through one typed layout class, never as
-     `setFloat(34 + i, ...)`.
+     `setFloat(34 + i, ...)`. It binds each uniform by name and checks its
+     type, so a uniform renamed or retyped on one side only throws when the
+     shader loads, and the render test fails.
+   - The shader gets the camera's position and its forward, right and up
+     directions from Dart, so the look-at maths exists only once.
 3. **Content is separate from looks.** What a body says is content. Where it
    orbits and how it's drawn are settings.
    - Categories and messages have explicit slugs, so URLs don't change when
      the copy does.
+   - Each category's body (its orbit, its angle along it at time 0, and its
+     radius) is a setting keyed by the category's slug, so reordering the
+     content doesn't move the bodies.
    - Flat placeholders act as the fake renderer. Navigation, content,
      routing and accessibility can all be built on them before the art is
      chosen.
@@ -125,8 +138,9 @@ enforces the boundary.
    `navigation/`, with no widgets. The tests:
    - The overview is the farthest view.
    - A focus flight is one move whose path never comes within the shadow
-     radius of the centre.
-   - A focus flight ends facing the centre at the configured angles.
+     radius of the central body.
+   - A focus flight ends facing the central body at the configured
+     angles.
    - Esc from any state ends in the overview.
 
 ## Libraries and state
@@ -139,8 +153,8 @@ enforces the boundary.
   - Navigation is a `Notifier` over a sealed state class. It changes only at
     transitions: it holds where a flight goes and when it started, not how
     far along it is.
-  - Content, the router and settings (placement, body looks, quality tier)
-    are providers, so tests override them.
+  - Content, the router and settings (each category's body, body looks,
+    quality tier) are providers, so tests override them.
   - `space/` and `content/` import neither Flutter nor Riverpod.
     `navigation/` imports `package:riverpod`, not `flutter_riverpod`, so its
     tests need no widgets.
@@ -148,6 +162,8 @@ enforces the boundary.
     in one place and watchers hear only real transitions. A provider owns
     the ticker and exposes a `ValueListenable<FrameSnapshot>` that painters
     repaint from.
+- **Vectors and matrices:** `vector_math_64`. It is pure Dart, and Flutter
+  already depends on it.
 - **Routing:** go_router. Each state has a URL.
   - `/` is the overview.
   - `/projects` focuses that body.
@@ -163,7 +179,9 @@ enforces the boundary.
   - Route changes move the camera; pages don't transition.
 - **Animation:** a single `Ticker` drives the per-frame snapshot. Flights are
   plain eased interpolations in `space/`, not `AnimationController`s spread
-  across widgets.
+  across widgets. The ticker runs only while the app is resumed, so the
+  scene stands still while the window is unfocused or hidden, and its time
+  goes on from where it stopped.
 
 ## Web: search engines and link previews
 
