@@ -27,11 +27,36 @@ final overviewRig = CameraRig(
   distance: overviewDistance,
 );
 
+/// The overview, seen with the yaw and pitch of [rig]. A flight to the
+/// overview ends here, so the camera moves out without a turn.
+CameraRig overviewWithAnglesOf(CameraRig rig) => CameraRig(
+  target: Vector3.zero(),
+  yaw: rig.yaw,
+  pitch: rig.pitch,
+  distance: overviewDistance,
+);
+
+/// The yaw offset of [bodyFraming] and [messageFraming], in rad. The two
+/// framings share their angles, so a flight between them moves the camera
+/// straight in or out.
+const _framingYawOffset = 0.3;
+
+/// The pitch offset of [bodyFraming] and [messageFraming], in rad.
+const _framingPitchOffset = 0.25;
+
 /// The framing for each body that the camera focuses on.
 const BodyFraming bodyFraming = BehindBody(
-  yawOffset: 0.3,
-  pitchOffset: 0.25,
+  yawOffset: _framingYawOffset,
+  pitchOffset: _framingPitchOffset,
   distance: 6,
+);
+
+/// The framing for a body when one of its messages is open. The camera is
+/// nearer to the body than in [bodyFraming].
+const BodyFraming messageFraming = BehindBody(
+  yawOffset: _framingYawOffset,
+  pitchOffset: _framingPitchOffset,
+  distance: 2.5,
 );
 
 const _inner = Orbit(radius: 6.5, tilt: 0.35, node: 0);

@@ -18,12 +18,21 @@ class DirectionAndDistance {
     required this.distance,
   });
 
-  /// The direction and distance of [point] from the origin. The origin has
-  /// no direction, so its azimuth and elevation are 0.
-  factory DirectionAndDistance.of(Vector3 point) {
+  /// The direction and distance of [point] from the origin.
+  ///
+  /// The origin has no direction. For the origin, the result has the
+  /// azimuth and elevation of [directionAtOrigin], or 0 and 0 if it is null.
+  factory DirectionAndDistance.of(
+    Vector3 point, {
+    DirectionAndDistance? directionAtOrigin,
+  }) {
     final distance = point.length;
     if (distance == 0) {
-      return const DirectionAndDistance(azimuth: 0, elevation: 0, distance: 0);
+      return DirectionAndDistance(
+        azimuth: directionAtOrigin?.azimuth ?? 0,
+        elevation: directionAtOrigin?.elevation ?? 0,
+        distance: 0,
+      );
     }
     return DirectionAndDistance(
       // The angle in the xz plane, from -z toward +x.

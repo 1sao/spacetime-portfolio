@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'content/content.dart';
+import 'navigation/map_location.dart';
 import 'providers.dart';
 import 'ui/list_page.dart';
 import 'ui/map_page.dart';
@@ -17,8 +18,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/',
-        pageBuilder: (_, _) =>
-            const NoTransitionPage<void>(key: _mapKey, child: MapPage()),
+        pageBuilder: (_, _) => const NoTransitionPage<void>(
+          key: _mapKey,
+          child: MapPage(location: OverviewLocation()),
+        ),
       ),
       // Before `/:category`, which would also match `/list`.
       GoRoute(
@@ -35,7 +38,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final category = _category(content(), params['category'])!;
           return NoTransitionPage<void>(
             key: _mapKey,
-            child: MapPage(category: category),
+            child: MapPage(location: CategoryLocation(category)),
           );
         },
       ),
@@ -47,7 +50,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final message = _message(category, params['message'])!;
           return NoTransitionPage<void>(
             key: _mapKey,
-            child: MapPage(category: category, message: message),
+            child: MapPage(location: MessageLocation(category, message)),
           );
         },
       ),

@@ -15,7 +15,9 @@ when opened.
   still in glyphs.
 - **Warp:** the camera dives to the active beacon while the sky rushes past,
   and the message decodes into a card.
-- **Esc / back:** returns to the overview.
+- **Esc:** goes one level up: from a message to its body, and from a body
+  to the overview.
+- **Back:** goes to the previous page, as on any site.
 - **List view:** the same content as a plain list, for anyone who doesn't
   want to fly.
 
@@ -152,7 +154,8 @@ enforces the boundary.
      radius of the central body.
    - A focus flight ends facing the central body at the configured
      angles.
-   - Esc from any state ends in the overview.
+   - Esc from any state, pressed until it does nothing more, ends in the
+     overview.
 
 ## Libraries and state
 
@@ -164,6 +167,18 @@ enforces the boundary.
   - Navigation is a `Notifier` over a sealed state class. It changes only at
     transitions: it holds where a flight goes and when it started, not how
     far along it is.
+    - A location is the overview, a category, or a message of a category.
+      Each map URL is one location, and Esc goes to a location's parent.
+    - The state is one of three kinds: at rest at the overview, at rest at
+      a body, or in flight. Each kind gives its location and the camera
+      rig for a time. During a flight, the location is the destination.
+    - A flight to a category is a focus, and a flight to a message is a
+      warp. The type of the location shows which it is.
+    - A state at rest at a body holds a framing, and the camera follows
+      the body. A message has a framing nearer to the body than its
+      category has.
+    - The frame loop reads the camera from the state for each frame, and
+      it tells the navigation when the clock passes the end of a flight.
   - Content, the router and settings (each category's body, body looks,
     quality tier) are providers, so tests override them.
   - `space/` and `content/` import neither Flutter nor Riverpod.
@@ -185,7 +200,8 @@ enforces the boundary.
   - URLs are paths (`/projects`), not Flutter web's default `/#/projects`.
   - A bad URL goes to the nearest page above it: `/projects/nope` to
     `/projects`, `/nope` to `/`.
-  - The browser's back button follows the same states as Esc.
+  - The browser's back button goes to the previous history entry, which
+    is one level up only for a visitor who came down through the levels.
   - Links are shareable.
   - Route changes move the camera; pages don't transition.
 - **Animation:** a single `Ticker` drives the per-frame snapshot. Flights are
@@ -193,6 +209,11 @@ enforces the boundary.
   across widgets. The ticker runs only while the app is resumed, so the
   scene stands still while the window is unfocused or hidden, and its time
   goes on from where it stopped.
+- **Time:** one clock for the scene. The ticker moves it forward, and
+  navigation reads it for the start time of a flight. It is a plain object
+  behind a provider, not Riverpod state. It stands still while the ticker
+  does not run, which includes the time when the list view is open, so
+  flights and orbits continue from where they stopped.
 
 ## Web: search engines and link previews
 

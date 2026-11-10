@@ -21,3 +21,10 @@ class Body {
   Vector3 positionAt(double seconds) =>
       orbit.pointAt(phase + orbit.angularSpeed * seconds);
 }
+
+extension BodyOfSlug on Map<String, Body> {
+  /// The body of the category with [slug]. It throws a [StateError] if the
+  /// category has no body.
+  Body of(String slug) =>
+      this[slug] ?? (throw StateError('No body for the category "$slug".'));
+}

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:homepage_v2/app.dart';
 import 'package:homepage_v2/content/content.dart';
+import 'package:homepage_v2/navigation/map_location.dart';
 import 'package:homepage_v2/providers.dart';
 import 'package:homepage_v2/router.dart';
 import 'package:homepage_v2/ui/map_page.dart';
@@ -68,9 +69,10 @@ void main() {
     final page = tester.element(find.byType(MapPage));
     final projects = fakeContent.first;
 
-    for (final (path, category, message) in [
-      ('/projects', projects, null),
-      ('/projects/two', projects, projects.messages[1]),
+    for (final (path, location) in <(String, MapLocation)>[
+      ('/projects', CategoryLocation(projects)),
+      ('/projects/two', MessageLocation(projects, projects.messages[1])),
+      ('/', const OverviewLocation()),
     ]) {
       router.go(path);
       // The scene ticks every frame, so the map page never settles.
@@ -78,8 +80,7 @@ void main() {
 
       final map = tester.widget<MapPage>(find.byType(MapPage));
       expect(tester.element(find.byType(MapPage)), same(page), reason: path);
-      expect(map.category, same(category), reason: path);
-      expect(map.message, same(message), reason: path);
+      expect(map.location, location, reason: path);
     }
   });
 }

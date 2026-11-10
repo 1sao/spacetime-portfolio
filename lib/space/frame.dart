@@ -22,7 +22,7 @@ class FrameSnapshot {
         ],
       );
 
-  /// Seconds since the frame loop started.
+  /// The time of the frame, in seconds on the clock of the scene.
   final double time;
 
   /// Where the scene is seen from.

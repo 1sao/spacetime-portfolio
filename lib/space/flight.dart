@@ -2,16 +2,14 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import 'body.dart';
 import 'camera_rig.dart';
 import 'direction_and_distance.dart';
-import 'framing.dart';
 
 /// The duration of a flight with no swing, in seconds.
 const _shortestFlightSeconds = 1.2;
 
-/// One eased movement of the camera from its start to a destination. The
-/// destination is the framing of a body, or the overview.
+/// One eased movement of the camera from its start to a destination, such
+/// as the framing of a body or the overview.
 ///
 /// A flight is a function of time. It keeps only its start, its destination
 /// and its start time. The navigation state can keep a flight, and the frame
@@ -32,59 +30,27 @@ const _shortestFlightSeconds = 1.2;
 /// The flight gets the destination again for each time. Because of this,
 /// the flight stops exactly at a body that moves.
 class Flight {
-  /// A flight from [from] to the [framing] of [body]. It starts at
-  /// [startTime], in seconds on the clock of the scene.
-  factory Flight.toBody({
-    required CameraRig from,
-    required Body body,
-    required BodyFraming framing,
-    required double startTime,
-  }) => Flight._(
-    from: from,
-    startTime: startTime,
-    destinationAt: (time) => framing.rigFor(body.positionAt(time)),
-  );
-
-  /// A flight from [from] to the overview. It starts at [startTime], in
-  /// seconds on the clock of the scene. The target goes back to the central
-  /// body. The camera moves to [distance] from the central body and keeps
-  /// its yaw and pitch.
-  factory Flight.toOverview({
-    required CameraRig from,
-    required double distance,
-    required double startTime,
-  }) {
-    final overview = CameraRig(
-      target: Vector3.zero(),
-      yaw: from.yaw,
-      pitch: from.pitch,
-      distance: distance,
-    );
-    return Flight._(
-      from: from,
-      startTime: startTime,
-      destinationAt: (_) => overview,
-    );
-  }
-
-  factory Flight._({
+  /// A flight from [from] to the rig that [destinationAt] gives for each
+  /// time, in seconds on the clock of the scene. It starts at [startTime].
+  /// The destination can move, such as the framing of a body.
+  factory Flight({
     required CameraRig from,
     required double startTime,
     required CameraRig Function(double time) destinationAt,
   }) {
     final destination = destinationAt(startTime);
-    final rawDestinationTarget = DirectionAndDistance.of(destination.target);
-    // A target at the central body has no direction. Such a target uses the
-    // direction of the target at the other end of the flight. Only the
-    // target uses this direction. The yaw and pitch of the camera do not
-    // change, so the camera does not jump.
-    final fromTarget = _withDirection(
-      target: DirectionAndDistance.of(from.target),
-      fallback: rawDestinationTarget,
+    // The target at the central body, at the origin, has no direction. In
+    // a flight to or from the overview, the target moves straight out from
+    // the central body or straight in. So an end at the central body takes
+    // the direction of the other end. This direction does not move the
+    // target, and the camera's yaw and pitch do not change because of it.
+    final fromTarget = DirectionAndDistance.of(
+      from.target,
+      directionAtOrigin: DirectionAndDistance.of(destination.target),
     );
-    final destinationTarget = _withDirection(
-      target: rawDestinationTarget,
-      fallback: fromTarget,
+    final destinationTarget = DirectionAndDistance.of(
+      destination.target,
+      directionAtOrigin: fromTarget,
     );
     final destinationRelativeYaw = destination.yaw - destinationTarget.azimuth;
 
@@ -209,9 +175,11 @@ class Flight {
     if (progress >= 1) return destination;
     final eased = _easeInOutCubic(progress);
 
-    final destinationTarget = _withDirection(
-      target: DirectionAndDistance.of(destination.target),
-      fallback: _fromTarget,
+    // As at the start, a destination at the central body takes the
+    // direction of the start.
+    final destinationTarget = DirectionAndDistance.of(
+      destination.target,
+      directionAtOrigin: _fromTarget,
     );
     // The destination azimuth for the ease. It is the start azimuth, plus
     // the turn from the start time, plus the movement of the destination
@@ -254,22 +222,6 @@ class Flight {
       distance: mix(from.distance, destination.distance, eased),
     );
   }
-
-  /// Gives a direction to a target at the central body.
-  ///
-  /// A target at the central body has no direction. For such a [target],
-  /// the result is at the central body, with the azimuth and elevation of
-  /// [fallback]. For all other values of [target], the result is [target].
-  static DirectionAndDistance _withDirection({
-    required DirectionAndDistance target,
-    required DirectionAndDistance fallback,
-  }) => target.distance != 0
-      ? target
-      : DirectionAndDistance(
-          azimuth: fallback.azimuth,
-          elevation: fallback.elevation,
-          distance: 0,
-        );
 }
 
 /// Eases [progress] from 0 to 1. The movement starts at rest, is fastest

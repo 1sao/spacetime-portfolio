@@ -1,16 +1,14 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../content/content.dart';
+import '../navigation/map_location.dart';
 import '../scene/scene_view.dart';
 
-/// The page for every map URL: the overview at `/`, a focused [category] at
-/// `/<category>`, and an open [message] at `/<category>/<message>`.
+/// The page for every map URL. Each URL gives one [location].
 class MapPage extends StatelessWidget {
-  const MapPage({super.key, this.category, this.message});
+  const MapPage({super.key, required this.location});
 
-  final Category? category;
-  final Message? message;
+  final MapLocation location;
 
   @override
   Widget build(BuildContext context) {
