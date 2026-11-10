@@ -11,6 +11,8 @@ Read `docs/architecture.md` before changing code. Its "Rules" and
   a verb such as `is`, `has` or `can`: `isResumed`, not `resumed`. This is
   Effective Dart's "non-imperative verb phrase". A named boolean parameter
   may drop the verb, as Effective Dart suggests: `paused: false`.
+- Use ASD-STE100 for code comments and docs.
+- Comments describe the code as it is now, never how it got there.
 
 ## Commands
 

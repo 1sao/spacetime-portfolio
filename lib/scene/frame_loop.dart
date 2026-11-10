@@ -39,8 +39,8 @@ final frameSnapshotListenableProvider =
         );
       }
 
-      FrameSnapshot at(double time) =>
-          FrameSnapshot.at(time, overviewCamera, inOrder);
+      final camera = overviewRig.camera;
+      FrameSnapshot at(double time) => FrameSnapshot.at(time, camera, inOrder);
 
       final currentFrame = ValueNotifier(at(0));
       // The scene's time when the ticker last started. A restarted ticker

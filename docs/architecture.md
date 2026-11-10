@@ -75,6 +75,17 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
   - The move takes 1.2 s for a small swing and up to 2.4 s for a half turn.
 - While focused, the camera turns with the body's orbit, so the hole stays
   put. Idle auto-rotate runs only in the overview.
+- **The camera is a rig.** The rig is a target point, and the yaw, pitch
+  and distance of the camera around that point. Flights, drag and zoom
+  change the rig. The pitch stays a little less than straight up or down.
+  When the camera looks straight up or down, it has no horizontal right
+  direction. Past that angle, the view turns upside down.
+- **A flight is a function of time.** It keeps its start, its destination
+  and its start time, and it calculates the rig for each time. Because of
+  this, the navigation state changes only when a flight starts or stops.
+- **The framing of a focused body is one kind in a sealed set.** At this
+  time, there is one kind: behind the body, as above. Other kinds can apply
+  to all bodies or to one body.
 
 ## Layers
 

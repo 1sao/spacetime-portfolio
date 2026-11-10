@@ -8,29 +8,18 @@ import 'package:vector_math/vector_math_64.dart';
 /// that reads it, so they shouldn't be changed in place.
 class Camera {
   factory Camera({required Vector3 position, required Vector3 target}) {
-    final forward = (target - position).normalized();
-    final right = Vector3(0, 1, 0).cross(forward).normalized();
+    final toTarget = target - position;
+    assert(toTarget.length2 > 0, 'The camera is at its target.');
+    final forward = toTarget.normalized();
+    final level = Vector3(0, 1, 0).cross(forward);
+    assert(level.length2 > 0, 'The camera looks straight up or down.');
+    final right = level.normalized();
     return Camera._(
       position: position,
       forward: forward,
       right: right,
       up: forward.cross(right),
     );
-  }
-
-  /// A camera [distance] from the central body, looking at it. Yaw turns it
-  /// about world y from the -z side, and pitch raises it above the xz plane.
-  /// All angles are in rad.
-  factory Camera.orbiting({
-    required double yaw,
-    required double pitch,
-    required double distance,
-  }) {
-    final flat = math.cos(pitch);
-    final position =
-        Vector3(flat * math.sin(yaw), math.sin(pitch), -flat * math.cos(yaw)) *
-        distance;
-    return Camera(position: position, target: Vector3.zero());
   }
 
   const Camera._({
@@ -97,7 +86,7 @@ class Screen {
   double get focal => math.min(width, height) / 2 / math.tan(fieldOfView / 2);
 }
 
-/// The angle the screen's shorter side spans, in rad. From the overview,
-/// 30 units out, the outer orbit then reaches about halfway to that side's
-/// edges.
-const fieldOfView = 82 * math.pi / 180;
+/// The angle that the shorter side of the screen spans, in rad. For
+/// example, from a camera 30 units from the central body, an orbit with a
+/// radius of 13.5 units fills approximately half of the shorter side.
+final fieldOfView = radians(82);

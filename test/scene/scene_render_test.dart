@@ -6,6 +6,7 @@ import 'package:homepage_v2/scene/looks.dart';
 import 'package:homepage_v2/scene/scene_shader.dart';
 import 'package:homepage_v2/scene/scene_view.dart';
 import 'package:homepage_v2/space/camera.dart';
+import 'package:homepage_v2/space/camera_rig.dart';
 import 'package:homepage_v2/space/frame.dart';
 import 'package:homepage_v2/space/site_space.dart';
 import 'package:vector_math/vector_math_64.dart' show Sphere, Vector2, Vector3;
@@ -33,7 +34,12 @@ void main() {
     Sphere.centerRadius(Vector3(9, -7, -6), 1.6),
   ];
   final cameras = {
-    'overview': Camera.orbiting(yaw: 0.3, pitch: 0.14, distance: 30),
+    'overview': CameraRig(
+      target: Vector3.zero(),
+      yaw: 0.3,
+      pitch: 0.14,
+      distance: 30,
+    ).camera,
     'nearer, aimed off the centre': Camera(
       position: Vector3(10, 5, -20),
       target: Vector3(0, 1, 0),
