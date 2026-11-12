@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homepage_v2/navigation/map_location.dart';
+import 'package:homepage_v2/navigation/map_navigation_state.dart';
 import 'package:homepage_v2/navigation/navigation.dart';
-import 'package:homepage_v2/navigation/navigation_state.dart';
 import 'package:homepage_v2/providers.dart';
 import 'package:homepage_v2/space/body.dart';
 import 'package:homepage_v2/space/camera.dart';
@@ -85,7 +85,7 @@ void main() {
     for (final (name, setup) in starts) {
       for (final isWaitingForEachFlight in [true, false]) {
         final (container, navigation, clock) = startedWith(setup);
-        NavigationState state() => container.read(navigationProvider);
+        MapNavigationState state() => container.read(navigationProvider);
         void finishFlight() {
           if (state() case InFlight(:final flight)) {
             clock.advanceTo(flight.endTime);
@@ -104,7 +104,8 @@ void main() {
         finishFlight();
 
         final reason = '$name, waiting: $isWaitingForEachFlight';
-        expect(state(), isA<AtOverview>(), reason: reason);
+        expect(state(), isA<AtRest>(), reason: reason);
+        expect(state().location, const OverviewLocation(), reason: reason);
         final rig = state().rigAt(clock.now);
         expect(rig.target.length, 0, reason: '$reason: target');
         expect(rig.distance, overviewDistance, reason: '$reason: distance');
@@ -116,7 +117,7 @@ void main() {
     for (final (name, setup) in starts) {
       for (final destination in locations) {
         final (container, navigation, clock) = startedWith(setup);
-        NavigationState state() => container.read(navigationProvider);
+        MapNavigationState state() => container.read(navigationProvider);
         final reason = '$name, to ${destination.name}';
 
         final before = state().rigAt(clock.now).camera;
@@ -159,12 +160,41 @@ void main() {
     clock.advanceTo(flight.endTime);
     navigation.endFinishedFlight();
     expect(changes, 2, reason: 'the flight ends');
-    expect(container.read(navigationProvider), isA<AtBody>());
+    expect(container.read(navigationProvider), isA<AtRest>());
+    expect(container.read(navigationProvider).location, location);
 
     clock.advanceBy(5);
     navigation.endFinishedFlight();
     navigation.flyTo(location);
     expect(changes, 2, reason: 'after the flight');
+  });
+
+  test('at rest, the camera frames the body of its location', () {
+    Body bodyOf(MapLocation location) => switch (location) {
+      OverviewLocation() => centralBody,
+      BodyLocation(:final category) => fakeBodies.of(category.slug),
+    };
+    for (final (name, setup) in starts) {
+      final (container, navigation, clock) = startedWith(setup);
+      if (container.read(navigationProvider) case InFlight(:final flight)) {
+        clock.advanceTo(flight.endTime);
+        navigation.endFinishedFlight();
+      }
+      final state = container.read(navigationProvider) as AtRest;
+      expect(state.framing.body, same(bodyOf(state.location)), reason: name);
+    }
+  });
+
+  test('a jump to the overview keeps the yaw and pitch of the camera', () {
+    for (final (name, setup) in starts) {
+      final (container, navigation, clock) = startedWith(setup);
+      final before = container.read(navigationProvider).rigAt(clock.now);
+      navigation.jumpTo(const OverviewLocation());
+      final after = container.read(navigationProvider).rigAt(clock.now);
+      expect(after.yaw, before.yaw, reason: name);
+      expect(after.pitch, before.pitch, reason: name);
+      expect(after.distance, overviewDistance, reason: name);
+    }
   });
 
   test('the camera is nearer to a body at a message than at its category', () {

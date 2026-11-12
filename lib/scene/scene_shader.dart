@@ -33,7 +33,7 @@ class SceneShader {
     }
     fragmentShader
         .getSingleUniformFloat('uCentralBodyRadius')
-        .set(centralBodyRadius);
+        .set(centralBody.radius);
     fragmentShader
         .getUniformVec3('uCentralBodyColour')
         .setColour(looks.centralBody);

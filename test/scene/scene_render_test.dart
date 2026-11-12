@@ -49,7 +49,7 @@ void main() {
   final discs = [
     (
       'the central body',
-      Sphere.centerRadius(Vector3.zero(), centralBodyRadius),
+      Sphere.centerRadius(Vector3.zero(), centralBody.radius),
       looks.centralBody,
     ),
     for (final (i, body) in bodies.indexed) ('body $i', body, looks.bodies[i]),

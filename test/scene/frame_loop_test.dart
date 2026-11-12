@@ -3,12 +3,12 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homepage_v2/navigation/map_location.dart';
+import 'package:homepage_v2/navigation/map_navigation_state.dart';
 import 'package:homepage_v2/navigation/navigation.dart';
-import 'package:homepage_v2/navigation/navigation_state.dart';
 import 'package:homepage_v2/providers.dart';
 import 'package:homepage_v2/scene/frame_loop.dart';
 import 'package:homepage_v2/space/frame.dart';
-import 'package:homepage_v2/space/site_space.dart';
+import 'package:homepage_v2/space/framing.dart';
 
 import '../fake_content.dart';
 
@@ -114,7 +114,7 @@ void main() {
     final ValueListenable<FrameSnapshot> currentFrame = container
         .listen(frameSnapshotListenableProvider, (_, _) {})
         .read();
-    NavigationState state() => container.read(navigationProvider);
+    MapNavigationState state() => container.read(navigationProvider);
     void expectCameraOfState(String reason) {
       final frame = currentFrame.value;
       final expected = state().rigAt(frame.time).camera.position;
@@ -131,11 +131,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(state(), isA<InFlight>());
     expectCameraOfState('during the flight');
-    final overview = overviewRig.camera.position;
+    final overview = const Framing.overview().rigAt(0).camera.position;
     expect(currentFrame.value.camera.position.distanceTo(overview), isNot(0));
 
     await tester.pump(const Duration(seconds: 3));
-    expect(state(), isA<AtBody>());
+    expect(state(), isA<AtRest>());
+    expect(state().location, CategoryLocation(category));
     expectCameraOfState('after the flight');
 
     container.dispose();

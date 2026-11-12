@@ -2,8 +2,8 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'orbit.dart';
 
-/// A category's body: a sphere that moves along an orbit round the central
-/// body.
+/// A sphere in the scene: a category's body, which moves along an orbit
+/// round the central body, or the central body, at the origin.
 class Body {
   const Body({required this.orbit, required this.phase, required this.radius});
 

@@ -1,53 +1,88 @@
-import 'package:vector_math/vector_math_64.dart';
-
+import 'body.dart';
 import 'camera_rig.dart';
 import 'direction_and_distance.dart';
+import 'site_space.dart';
 
-/// How the camera frames a body when the camera is focused on that body.
-/// The framing sets where a flight to the body stops, and how the camera
-/// follows the body after the flight.
-sealed class BodyFraming {
-  const BodyFraming();
+/// The yaw of [Framing.ofCategory] and [Framing.ofMessage], in rad. The two
+/// framings share their angles, so a flight between them moves the camera
+/// straight in or out.
+const _bodyYaw = 0.3;
 
-  /// The rig that frames a body with its centre at [bodyPosition].
-  CameraRig rigFor(Vector3 bodyPosition);
-}
+/// The pitch of [Framing.ofCategory] and [Framing.ofMessage], in rad.
+const _bodyPitch = 0.25;
 
-/// The camera is behind the body, on the side away from the central body.
-/// It is a small angle to the side of and above the line from the central
-/// body through the body. It looks at the body, and the central body shows
-/// next to the body on the screen.
+/// Where the camera is around a body: a yaw, a pitch and a distance from
+/// the body.
 ///
-/// The camera keeps the same angles to the direction of the body when the
-/// body moves along its orbit. The central body then stays at the same
-/// position on the screen.
-final class BehindBody extends BodyFraming {
-  const BehindBody({
-    required this.yawOffset,
-    required this.pitchOffset,
+/// The angles are measured from the position directly behind the body.
+/// That position is on the line from the central body, at the origin,
+/// through the body, on the side away from the central body. When the body
+/// moves along its orbit, the camera keeps the same angles to that line.
+/// So the central body stays at almost the same position on the screen. It
+/// moves a little on a tilted orbit, because the angles are a yaw and a
+/// pitch, not a fixed rotation.
+///
+/// The central body has no direction from the origin. For the central
+/// body, the angles are measured from azimuth 0 and elevation 0, so they
+/// are the camera's own yaw and pitch.
+class Framing {
+  const Framing({
+    required this.body,
+    required this.yaw,
+    required this.pitch,
     required this.distance,
   });
 
-  /// The angle around world y from the position directly behind the body to
+  /// The overview at the start of a visit.
+  const Framing.overview()
+    : body = centralBody,
+      yaw = 0.3,
+      pitch = 0.14,
+      distance = overviewDistance;
+
+  /// The overview, seen with the yaw and pitch of [rig]. A flight to the
+  /// overview ends here, so the camera moves out without a turn.
+  Framing.overviewWithAnglesOf(CameraRig rig)
+    : body = centralBody,
+      yaw = rig.yaw,
+      pitch = rig.pitch,
+      distance = overviewDistance;
+
+  /// The framing of [body] when the camera focuses on its category.
+  const Framing.ofCategory(this.body)
+    : yaw = _bodyYaw,
+      pitch = _bodyPitch,
+      distance = 6;
+
+  /// The framing of [body] when one of its messages is open. The camera is
+  /// nearer to the body than in [Framing.ofCategory].
+  const Framing.ofMessage(this.body)
+    : yaw = _bodyYaw,
+      pitch = _bodyPitch,
+      distance = 2.5;
+
+  /// The body that the camera looks at.
+  final Body body;
+
+  /// The angle around world y from the position directly behind [body] to
   /// the camera, in rad.
-  final double yawOffset;
+  final double yaw;
 
-  /// The angle up from the position directly behind the body to the camera,
+  /// The angle up from the position directly behind [body] to the camera,
   /// in rad.
-  final double pitchOffset;
+  final double pitch;
 
-  /// The distance from the centre of the body to the camera, in world units.
+  /// The distance from the centre of [body] to the camera, in world units.
   final double distance;
 
-  @override
-  CameraRig rigFor(Vector3 bodyPosition) {
-    // The position directly behind the body is on the line from the central
-    // body, at the origin, through the body.
+  /// The rig at [time], in seconds on the clock of the scene.
+  CameraRig rigAt(double time) {
+    final bodyPosition = body.positionAt(time);
     final behind = DirectionAndDistance.of(bodyPosition);
     return CameraRig(
       target: bodyPosition,
-      yaw: behind.azimuth + yawOffset,
-      pitch: behind.elevation + pitchOffset,
+      yaw: behind.azimuth + yaw,
+      pitch: behind.elevation + pitch,
       distance: distance,
     );
   }

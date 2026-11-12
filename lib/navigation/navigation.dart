@@ -4,11 +4,10 @@ import '../providers.dart';
 import '../space/body.dart';
 import '../space/flight.dart';
 import '../space/scene_clock.dart';
-import '../space/site_space.dart';
 import 'map_location.dart';
-import 'navigation_state.dart';
+import 'map_navigation_state.dart';
 
-final navigationProvider = NotifierProvider<Navigation, NavigationState>(
+final navigationProvider = NotifierProvider<Navigation, MapNavigationState>(
   Navigation.new,
 );
 
@@ -16,13 +15,13 @@ final navigationProvider = NotifierProvider<Navigation, NavigationState>(
 /// place where flights start and end.
 ///
 /// The state changes only when a flight starts or ends, and at a jump.
-class Navigation extends Notifier<NavigationState> {
+class Navigation extends Notifier<MapNavigationState> {
   late SceneClock _clock;
 
   @override
-  NavigationState build() {
+  MapNavigationState build() {
     _clock = ref.watch(sceneClockProvider);
-    return AtOverview(overviewRig);
+    return const AtRest.start();
   }
 
   /// Starts a flight to [location] from the camera's rig at this time. If a
@@ -33,22 +32,17 @@ class Navigation extends Notifier<NavigationState> {
 
     final now = _clock.now;
     final from = state.rigAt(now);
-    final AtRest arrival = switch (location) {
-      OverviewLocation() => AtOverview(overviewWithAnglesOf(from)),
-      BodyLocation() => _atBody(location),
-    };
+    final arrival = _restAt(location);
     state = InFlight(
       flight: Flight(from: from, startTime: now, destinationAt: arrival.rigAt),
       arrival: arrival,
     );
   }
 
-  /// Puts the camera at [location] immediately, without a flight.
+  /// Puts the camera at [location] immediately, without a flight. At the
+  /// overview, the camera keeps its yaw and pitch, as at the end of a flight.
   void jumpTo(MapLocation location) {
-    state = switch (location) {
-      OverviewLocation() => AtOverview(overviewRig),
-      BodyLocation() => _atBody(location),
-    };
+    state = _restAt(location);
   }
 
   /// Ends the flight in progress if the clock of the scene is at or after
@@ -61,13 +55,13 @@ class Navigation extends Notifier<NavigationState> {
     }
   }
 
-  /// The state at rest at [location], with the body of its category.
-  AtBody _atBody(BodyLocation location) => AtBody(
-    location: location,
-    body: ref.read(bodiesProvider).of(location.category.slug),
-    framing: switch (location) {
-      CategoryLocation() => bodyFraming,
-      MessageLocation() => messageFraming,
-    },
-  );
+  /// The state at rest at [location]. At the overview, the camera keeps the
+  /// yaw and pitch that it has now, so it does not turn.
+  AtRest _restAt(MapLocation location) => switch (location) {
+    OverviewLocation() => AtRest.atOverview(state.rigAt(_clock.now)),
+    BodyLocation() => AtRest.atBody(
+      location,
+      ref.read(bodiesProvider).of(location.category.slug),
+    ),
+  };
 }

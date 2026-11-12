@@ -29,13 +29,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, state) =>
             NoTransitionPage<void>(key: state.pageKey, child: const ListPage()),
       ),
-      // The redirect has already sent every unknown slug elsewhere, so the
-      // `!`s in routes below are safe.
+      // The route patterns make each path parameter present, and the
+      // redirect has already sent every unknown slug elsewhere. So the `!`s
+      // in the routes below are safe.
       GoRoute(
         path: '/:category',
         pageBuilder: (_, state) {
           final params = state.pathParameters;
-          final category = _category(content(), params['category'])!;
+          final category = content().withSlug(params['category']!)!;
           return NoTransitionPage<void>(
             key: _mapKey,
             child: MapPage(location: CategoryLocation(category)),
@@ -46,8 +47,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/:category/:message',
         pageBuilder: (_, state) {
           final params = state.pathParameters;
-          final category = _category(content(), params['category'])!;
-          final message = _message(category, params['message'])!;
+          final category = content().withSlug(params['category']!)!;
+          final message = category.messages.withSlug(params['message']!)!;
           return NoTransitionPage<void>(
             key: _mapKey,
             child: MapPage(location: MessageLocation(category, message)),
@@ -71,19 +72,13 @@ String? redirectFor(List<Category> content, List<String> segments) {
   if (segments.isEmpty) return null;
   if (segments.first == 'list') return segments.length == 1 ? null : '/list';
 
-  final category = _category(content, segments.first);
+  final category = content.withSlug(segments.first);
   if (category == null) return '/';
   if (segments.length == 1) return null;
 
-  final message = _message(category, segments[1]);
+  final message = category.messages.withSlug(segments[1]);
   if (message == null) return '/${category.slug}';
   if (segments.length == 2) return null;
 
   return '/${category.slug}/${message.slug}';
 }
-
-Category? _category(List<Category> content, String? slug) =>
-    content.where((category) => category.slug == slug).firstOrNull;
-
-Message? _message(Category category, String? slug) =>
-    category.messages.where((message) => message.slug == slug).firstOrNull;

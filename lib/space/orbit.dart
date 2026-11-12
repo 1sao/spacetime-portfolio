@@ -9,12 +9,27 @@ const _referenceRadius = 6.5;
 
 const _referencePeriodSeconds = 120.0;
 
-/// A circular orbit round the central body, which sits at the origin.
+/// How a body moves round the origin, where the central body sits.
+sealed class Orbit {
+  const Orbit();
+
+  /// How fast a body on this orbit goes round, in rad per second.
+  double get angularSpeed;
+
+  /// The point [angle] rad round the orbit, in world units.
+  Vector3 pointAt(double angle);
+}
+
+/// A circle round the origin.
 ///
 /// The circle starts flat in the xz plane, is tilted by [tilt] about the x
 /// axis, and is then turned by [node] about the y axis.
-class Orbit {
-  const Orbit({required this.radius, required this.tilt, required this.node});
+final class CircularOrbit extends Orbit {
+  const CircularOrbit({
+    required this.radius,
+    required this.tilt,
+    required this.node,
+  }) : assert(radius > 0, 'A body without an orbit has NoOrbit.');
 
   /// The circle's radius, in world units.
   final double radius;
@@ -28,21 +43,32 @@ class Orbit {
   /// longitude of the ascending node.
   final double node;
 
-  /// How fast a body on this orbit goes round, in rad per second. By
-  /// Kepler's third law, an orbit's period grows with its radius to the
+  /// By Kepler's third law, an orbit's period grows with its radius to the
   /// power 1.5, so outer bodies are slower.
+  @override
   double get angularSpeed {
     final periodSeconds =
         _referencePeriodSeconds * math.pow(radius / _referenceRadius, 1.5);
     return 2 * math.pi / periodSeconds;
   }
 
-  /// The point [angle] rad round the circle, in world units. Angle 0 is
-  /// where the circle crosses the xz plane on the +x side before [node]
-  /// turns it.
+  /// Angle 0 is where the circle crosses the xz plane on the +x side before
+  /// [node] turns it.
+  @override
   Vector3 pointAt(double angle) => Matrix3.rotationY(node).transformed(
     Matrix3.rotationX(tilt).transformed(
       Vector3(radius * math.cos(angle), 0, radius * math.sin(angle)),
     ),
   );
+}
+
+/// The body stays at the origin, as the central body does.
+final class NoOrbit extends Orbit {
+  const NoOrbit();
+
+  @override
+  double get angularSpeed => 0;
+
+  @override
+  Vector3 pointAt(double angle) => Vector3.zero();
 }

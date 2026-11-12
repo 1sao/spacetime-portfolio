@@ -22,6 +22,18 @@ class Category {
   final List<Message> messages;
 }
 
+extension CategoryWithSlug on List<Category> {
+  /// The category with [slug], or null if no category has it.
+  Category? withSlug(String slug) =>
+      where((category) => category.slug == slug).firstOrNull;
+}
+
+extension MessageWithSlug on List<Message> {
+  /// The message with [slug], or null if no message has it.
+  Message? withSlug(String slug) =>
+      where((message) => message.slug == slug).firstOrNull;
+}
+
 /// Slugs a category can't take: `/list` is the list view, and `flutter run`
 /// handles paths under `/assets`, `/canvaskit` and `/packages` itself
 /// instead of loading the app.

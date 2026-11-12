@@ -76,7 +76,7 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
     straight behind the body, so the hole shows beside it.
   - The move takes 1.2 s for a small swing and up to 2.4 s for a half turn.
 - While focused, the camera turns with the body's orbit, so the hole stays
-  put. Idle auto-rotate runs only in the overview.
+  almost in place on the screen. Idle auto-rotate runs only in the overview.
 - **The camera is a rig.** The rig is a target point, and the yaw, pitch
   and distance of the camera around that point. Flights, drag and zoom
   change the rig. The pitch stays a little less than straight up or down.
@@ -85,9 +85,13 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
 - **A flight is a function of time.** It keeps its start, its destination
   and its start time, and it calculates the rig for each time. Because of
   this, the navigation state changes only when a flight starts or stops.
-- **The framing of a focused body is one kind in a sealed set.** At this
-  time, there is one kind: behind the body, as above. Other kinds can apply
-  to all bodies or to one body.
+- **A framing holds the camera at rest.** It is a body, and a yaw, a
+  pitch and a distance from that body. The angles are measured from
+  straight behind the body: the direction from the central body through
+  the body. The overview is a framing of the central body. The central
+  body does not move and has no direction from itself, so there the angles
+  are the camera's own yaw and pitch. Drag and zoom change every framing in
+  the same way.
 
 ## Layers
 
@@ -169,14 +173,14 @@ enforces the boundary.
     far along it is.
     - A location is the overview, a category, or a message of a category.
       Each map URL is one location, and Esc goes to a location's parent.
-    - The state is one of three kinds: at rest at the overview, at rest at
-      a body, or in flight. Each kind gives its location and the camera
-      rig for a time. During a flight, the location is the destination.
+    - The state is one of two kinds: at rest, or in flight. Each kind
+      gives its location and the camera rig for a time. During a flight,
+      the location is the destination.
     - A flight to a category is a focus, and a flight to a message is a
       warp. The type of the location shows which it is.
-    - A state at rest at a body holds a framing, and the camera follows
-      the body. A message has a framing nearer to the body than its
-      category has.
+    - A state at rest holds a framing, and the camera follows the framed
+      body. At the overview, the framed body is the central body. A
+      message has a framing nearer to its body than its category has.
     - The frame loop reads the camera from the state for each frame, and
       it tells the navigation when the clock passes the end of a flight.
   - Content, the router and settings (each category's body, body looks,

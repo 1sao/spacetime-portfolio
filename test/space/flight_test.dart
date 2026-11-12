@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:homepage_v2/space/body.dart';
 import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/camera_rig.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
@@ -17,20 +18,23 @@ void main() {
     String slug,
     CameraRig from,
     double startTime, [
-    BodyFraming framing = bodyFraming,
+    Framing Function(Body) framingOf = Framing.ofCategory,
   ]) => Flight(
     from: from,
     startTime: startTime,
-    destinationAt: (time) => framing.rigFor(bodies[slug]!.positionAt(time)),
+    destinationAt: framingOf(bodies[slug]!).rigAt,
   );
 
   /// The framings of a body: for its category, and for an open message.
-  const framings = {'framed': bodyFraming, 'with a message': messageFraming};
+  const framings = {
+    'framed': Framing.ofCategory,
+    'with a message': Framing.ofMessage,
+  };
 
   Flight toOverview(CameraRig from, double startTime) => Flight(
     from: from,
     startTime: startTime,
-    destinationAt: (_) => overviewWithAnglesOf(from),
+    destinationAt: Framing.overviewWithAnglesOf(from).rigAt,
   );
 
   /// The start rigs for the flights, each with the time when it applies:
@@ -44,20 +48,20 @@ void main() {
       for (final pitch in [-1.2, 0.0, 1.2])
         (
           'the overview at yaw $yaw, pitch $pitch',
-          CameraRig(
-            target: overviewRig.target,
+          Framing(
+            body: centralBody,
             yaw: yaw,
             pitch: pitch,
             distance: overviewDistance,
-          ),
+          ).rigAt(0),
           0.0,
         ),
     for (final slug in bodies.keys)
-      for (final MapEntry(key: framed, value: framing) in framings.entries)
+      for (final MapEntry(key: framed, value: framingOf) in framings.entries)
         for (final time in [0.0, 40.0])
           (
             '$slug $framed at ${time}s',
-            framing.rigFor(bodies[slug]!.positionAt(time)),
+            framingOf(bodies[slug]!).rigAt(time),
             time,
           ),
     for (final (name, flight) in [
@@ -66,13 +70,16 @@ void main() {
           if (from != to)
             (
               'from $from to $to',
-              toBody(to, bodyFraming.rigFor(bodies[from]!.positionAt(0)), 0),
+              toBody(to, Framing.ofCategory(bodies[from]!).rigAt(0), 0),
             ),
       for (final slug in bodies.keys) ...[
-        ('from the overview to $slug', toBody(slug, overviewRig, 0)),
+        (
+          'from the overview to $slug',
+          toBody(slug, const Framing.overview().rigAt(0), 0),
+        ),
         (
           'from $slug to the overview',
-          toOverview(bodyFraming.rigFor(bodies[slug]!.positionAt(0)), 0),
+          toOverview(Framing.ofCategory(bodies[slug]!).rigAt(0), 0),
         ),
       ],
     ])
@@ -91,15 +98,15 @@ void main() {
   final flights = [
     for (final (startName, from, time) in starts) ...[
       for (final MapEntry(key: slug, value: body) in bodies.entries)
-        for (final MapEntry(key: framed, value: framing) in framings.entries)
+        for (final MapEntry(key: framed, value: framingOf) in framings.entries)
           () {
-            final flight = toBody(slug, from, time, framing);
+            final flight = toBody(slug, from, time, framingOf);
             return (
               'from $startName to $slug $framed',
               flight,
               (
-                framing.rigFor(body.positionAt(flight.startTime)),
-                framing.rigFor(body.positionAt(flight.endTime)),
+                framingOf(body).rigAt(flight.startTime),
+                framingOf(body).rigAt(flight.endTime),
               ),
             );
           }(),
@@ -108,10 +115,15 @@ void main() {
   ];
 
   test('the overview is the farthest view', () {
-    final overview = overviewRig.camera.position.length;
+    final overview = const Framing.overview().rigAt(0).camera.position.length;
     for (final MapEntry(key: slug, value: body) in bodies.entries) {
-      for (final MapEntry(key: framed, value: framing) in framings.entries) {
-        final flight = toBody(slug, overviewRig, 0, framing);
+      for (final MapEntry(key: framed, value: framingOf) in framings.entries) {
+        final flight = toBody(
+          slug,
+          const Framing.overview().rigAt(0),
+          0,
+          framingOf,
+        );
         final period = 2 * math.pi / body.orbit.angularSpeed;
         for (var i = 0; i < 100; i++) {
           final time = flight.endTime + period * i / 100;
@@ -130,7 +142,7 @@ void main() {
       for (var time = flight.startTime; time <= flight.endTime; time += _step) {
         expect(
           flight.rigAt(time).camera.position.length,
-          greaterThan(centralBodyRadius),
+          greaterThan(centralBody.radius),
           reason: '$name at ${time}s',
         );
       }
@@ -183,13 +195,14 @@ void main() {
   test('after a flight to a body, the camera has the angles of the framing '
       'and shows the central body, also when the body moves', () {
     for (final MapEntry(key: slug, value: body) in bodies.entries) {
-      for (final MapEntry(key: framed, value: anyFraming) in framings.entries) {
-        // A new kind of framing causes a compile error here. Add a test for the
-        // new kind.
-        final framing = switch (anyFraming) {
-          final BehindBody framing => framing,
-        };
-        final flight = toBody(slug, overviewRig, 0, framing);
+      for (final MapEntry(key: framed, value: framingOf) in framings.entries) {
+        final framing = framingOf(body);
+        final flight = toBody(
+          slug,
+          const Framing.overview().rigAt(0),
+          0,
+          framingOf,
+        );
         for (final time in [
           flight.endTime,
           flight.endTime + 10,
@@ -213,12 +226,12 @@ void main() {
           final seen = DirectionAndDistance.of(camera.position - bodyPosition);
           expect(
             wrapAngle(seen.azimuth - behind.azimuth),
-            closeTo(framing.yawOffset, 1e-9),
+            closeTo(framing.yaw, 1e-9),
             reason: '$reason: yaw',
           );
           expect(
             seen.elevation - behind.elevation,
-            closeTo(framing.pitchOffset, 1e-9),
+            closeTo(framing.pitch, 1e-9),
             reason: '$reason: pitch',
           );
           expect(
@@ -244,16 +257,20 @@ void main() {
             Screen(width: 400, height: 250),
             Screen(width: 250, height: 400),
           ]) {
-            final centralBody = camera.project(Vector3.zero(), screen);
+            final centralBodyOnScreen = camera.project(Vector3.zero(), screen);
             final size = '${screen.width}x${screen.height}';
-            expect(centralBody, isNotNull, reason: '$reason, $size: in front');
             expect(
-              centralBody!.x,
+              centralBodyOnScreen,
+              isNotNull,
+              reason: '$reason, $size: in front',
+            );
+            expect(
+              centralBodyOnScreen!.x,
               inInclusiveRange(0, screen.width),
               reason: '$reason, $size: on screen',
             );
             expect(
-              centralBody.y,
+              centralBodyOnScreen.y,
               inInclusiveRange(0, screen.height),
               reason: '$reason, $size: on screen',
             );

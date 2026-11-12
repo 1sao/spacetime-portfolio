@@ -22,12 +22,12 @@ const fakeContent = [
 /// A body for each of [fakeContent]'s categories.
 const fakeBodies = {
   'projects': Body(
-    orbit: Orbit(radius: 6, tilt: 0, node: 0),
+    orbit: CircularOrbit(radius: 6, tilt: 0, node: 0),
     phase: 0,
     radius: 0.5,
   ),
   'contact': Body(
-    orbit: Orbit(radius: 10, tilt: 0, node: 0),
+    orbit: CircularOrbit(radius: 10, tilt: 0, node: 0),
     phase: 0,
     radius: 0.5,
   ),
