@@ -21,7 +21,7 @@ class Navigation extends Notifier<MapNavigationState> {
   @override
   MapNavigationState build() {
     _clock = ref.watch(sceneClockProvider);
-    return const AtRest.start();
+    return AtRest.start();
   }
 
   /// Starts a flight to [location] from the camera's rig at this time. If a
@@ -43,6 +43,24 @@ class Navigation extends Notifier<MapNavigationState> {
   /// overview, the camera keeps its yaw and pitch, as at the end of a flight.
   void jumpTo(MapLocation location) {
     state = _restAt(location);
+  }
+
+  /// Turns the camera around the framed body by [yaw] and [pitch], in rad.
+  /// During a flight, the visitor can't turn the camera, so this does
+  /// nothing.
+  void turn({required double yaw, required double pitch}) {
+    final current = state;
+    if (current is! AtRest) return;
+    current.turn(yaw: yaw, pitch: pitch, time: _clock.now);
+  }
+
+  /// Multiplies the distance from the camera to the framed body by
+  /// [factor]. A [factor] less than 1 moves the camera nearer. During a
+  /// flight, the visitor can't move the camera, so this does nothing.
+  void zoom(double factor) {
+    final current = state;
+    if (current is! AtRest) return;
+    current.zoom(factor);
   }
 
   /// Ends the flight in progress if the clock of the scene is at or after

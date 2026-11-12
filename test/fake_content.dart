@@ -1,4 +1,5 @@
 import 'package:homepage_v2/content/content.dart';
+import 'package:homepage_v2/navigation/map_location.dart';
 import 'package:homepage_v2/space/body.dart';
 import 'package:homepage_v2/space/orbit.dart';
 
@@ -32,3 +33,12 @@ const fakeBodies = {
     radius: 0.5,
   ),
 };
+
+/// Every location of [fakeContent].
+final fakeLocations = <MapLocation>[
+  const OverviewLocation(),
+  for (final category in fakeContent) ...[
+    CategoryLocation(category),
+    for (final message in category.messages) MessageLocation(category, message),
+  ],
+];

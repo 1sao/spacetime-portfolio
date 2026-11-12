@@ -2,12 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../navigation/map_location.dart';
 import '../providers.dart';
 
 /// Every category and message as plain text, for anyone who doesn't want to
 /// fly.
 class ListPage extends ConsumerWidget {
   const ListPage({super.key});
+
+  /// The URL path of the list view.
+  static const path = '/list';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,7 +29,7 @@ class ListPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextButton(
-                    onPressed: () => context.go('/'),
+                    onPressed: () => context.go(const OverviewLocation().path),
                     child: const Text('Map'),
                   ),
                   for (final category in content) ...[

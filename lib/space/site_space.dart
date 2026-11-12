@@ -9,10 +9,8 @@ import 'orbit.dart';
 /// falls in, so 2.6 is the radius of the disc it appears as.
 const centralBody = Body(orbit: NoOrbit(), phase: 0, radius: 2.6);
 
-/// The distance from the overview camera to the central body, in world
-/// units. This distance must be more than the distance from the central
-/// body to the camera in each framing of a category's body, so that the
-/// overview is the farthest view.
+/// The default distance from the overview camera to the central body, in
+/// world units.
 const double overviewDistance = 30;
 
 const _inner = CircularOrbit(radius: 6.5, tilt: 0.35, node: 0);

@@ -68,8 +68,9 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
 
 ## Camera
 
-- The overview sits 30 units out, beyond every focused framing: the outer
-  orbit is 13.5 units, plus 6 of zoom.
+- The overview sits 30 units out, beyond every focused framing. Zoom
+  keeps it 24 to 60 units out, and the farthest focused camera is 21.5
+  units out: the outer orbit is 13.5 units, plus 8 of zoom.
 - **Focusing is one eased move** in spherical coordinates (azimuth,
   elevation, distance). The camera goes round the hole, never through it.
   - It turns to face the hole 0.3 rad of yaw and 0.25 rad of pitch off
@@ -92,6 +93,16 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
   body does not move and has no direction from itself, so there the angles
   are the camera's own yaw and pitch. Drag and zoom change every framing in
   the same way.
+- **Drag and zoom have limits,** as data on each framing.
+  - At a body, a drag turns the camera at most a quarter turn of yaw and a
+    quarter turn of pitch from straight behind the body. So the camera
+    stays at least 0.89 times the orbit's radius from the central body. The zoom stays 1.5 to 8 units from the
+    body, so the camera stays outside the framed body. Other bodies can
+    pass through the camera.
+  - At the overview, any yaw. The zoom stays 24 to 60 units out.
+  - The camera's own pitch stays within the rig's clamp at the time of the
+    drag. So a drag does not store a turn that the camera does not show.
+  - During a flight, the visitor can't move the camera.
 
 ## Layers
 
@@ -170,7 +181,9 @@ enforces the boundary.
   for `ChangeNotifier`; Riverpod was chosen to learn it.
   - Navigation is a `Notifier` over a sealed state class. It changes only at
     transitions: it holds where a flight goes and when it started, not how
-    far along it is.
+    far along it is. A drag or a zoom changes the framing of the state at
+    rest in place, without a new state, so that listeners hear only
+    transitions.
     - A location is the overview, a category, or a message of a category.
       Each map URL is one location, and Esc goes to a location's parent.
     - The state is one of two kinds: at rest, or in flight. Each kind
@@ -180,9 +193,14 @@ enforces the boundary.
       warp. The type of the location shows which it is.
     - A state at rest holds a framing, and the camera follows the framed
       body. At the overview, the framed body is the central body. A
-      message has a framing nearer to its body than its category has.
+      message starts with a framing nearer to its body than its category
+      has. Zoom can change both framings.
     - The frame loop reads the camera from the state for each frame, and
       it tells the navigation when the clock passes the end of a flight.
+    - The URL drives the state. A listener on the router's delegate puts
+      the camera at the first URL of a visit, and flies it to each later
+      one. Nothing writes the URL from the state. The list view leaves the
+      state as it is.
   - Content, the router and settings (each category's body, body looks,
     quality tier) are providers, so tests override them.
   - `space/` and `content/` import neither Flutter nor Riverpod.
@@ -206,13 +224,18 @@ enforces the boundary.
     `/projects`, `/nope` to `/`.
   - The browser's back button goes to the previous history entry, which
     is one level up only for a visitor who came down through the levels.
+  - Esc goes to the parent location with `go`, so it adds a history entry
+    as a link does, and back after Esc goes down again.
+  - Each location gives its path (`MapLocation.path`, `ListPage.path`),
+    and one parser turns a URL into a location.
   - Links are shareable.
   - Route changes move the camera; pages don't transition.
 - **Animation:** a single `Ticker` drives the per-frame snapshot. Flights are
   plain eased interpolations in `space/`, not `AnimationController`s spread
   across widgets. The ticker runs only while the app is resumed, so the
   scene stands still while the window is unfocused or hidden, and its time
-  goes on from where it stopped.
+  goes on from where it stopped. One provider, `isSceneRunningProvider`,
+  says if the scene runs. Camera input does nothing while it stands still.
 - **Time:** one clock for the scene. The ticker moves it forward, and
   navigation reads it for the start time of a flight. It is a plain object
   behind a provider, not Riverpod state. It stands still while the ticker

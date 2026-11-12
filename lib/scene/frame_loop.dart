@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../navigation/navigation.dart';
 import '../providers.dart';
 import '../space/body.dart';
 import '../space/frame.dart';
+import 'scene_running.dart';
 import 'scene_shader.dart';
 
 /// Provides a listenable holding the current [FrameSnapshot]. While anything
@@ -16,10 +16,9 @@ import 'scene_shader.dart';
 /// The ticker moves the scene's clock, and each snapshot has the camera of
 /// the navigation state at the clock's time.
 ///
-/// The scene's time stands still while the app isn't resumed: on the web,
-/// while the window is unfocused or the tab hidden. It also stands still
-/// while nothing watches this provider. It goes on from there, so nothing
-/// jumps.
+/// The scene's time stands still while [isSceneRunningProvider] is false,
+/// and while nothing watches this provider. It goes on from there, so
+/// nothing jumps.
 ///
 /// The provider's own value, the listenable, changes only when the content
 /// or the bodies do, so watching the provider doesn't rebuild every frame.
@@ -51,8 +50,8 @@ final frameSnapshotListenableProvider =
       );
 
       final currentFrame = ValueNotifier(frameAtClockTime());
-      // The snapshot also changes here, so a change shows while the ticker
-      // is stopped.
+      // The snapshot also changes here, so a transition shows while the
+      // ticker is stopped.
       ref.listen(navigationProvider, (_, next) {
         navigation = next;
         currentFrame.value = frameAtClockTime();
@@ -65,21 +64,15 @@ final frameSnapshotListenableProvider =
         navigationNotifier.endFinishedFlight();
         currentFrame.value = frameAtClockTime();
       });
-      void followLifecycle(AppLifecycleState? state) {
-        // Null until the platform first reports a state.
-        final isResumed = state == null || state == AppLifecycleState.resumed;
-        if (isResumed && !ticker.isActive) {
+      ref.listen(isSceneRunningProvider, fireImmediately: true, (_, isRunning) {
+        if (isRunning && !ticker.isActive) {
           startedAt = clock.now;
           ticker.start();
-        } else if (!isResumed && ticker.isActive) {
+        } else if (!isRunning && ticker.isActive) {
           ticker.stop();
         }
-      }
-
-      followLifecycle(SchedulerBinding.instance.lifecycleState);
-      final lifecycle = AppLifecycleListener(onStateChange: followLifecycle);
+      });
       ref.onDispose(() {
-        lifecycle.dispose();
         ticker.dispose();
         currentFrame.dispose();
       });

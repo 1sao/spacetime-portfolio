@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'content/content.dart';
 import 'navigation/map_location.dart';
+import 'navigation/navigation.dart';
 import 'providers.dart';
 import 'ui/list_page.dart';
 import 'ui/map_page.dart';
@@ -13,51 +16,57 @@ import 'ui/map_page.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   List<Category> content() => ref.read(contentProvider);
 
+  Page<void> mapPage(GoRouterState state) => NoTransitionPage<void>(
+    key: _mapKey,
+    child: MapPage(location: mapLocationFor(content(), state.uri)!),
+  );
+
   final router = GoRouter(
-    redirect: (_, state) => redirectFor(content(), state.uri.pathSegments),
+    redirect: (_, state) => redirectFor(content(), state.uri),
     routes: [
       GoRoute(
-        path: '/',
-        pageBuilder: (_, _) => const NoTransitionPage<void>(
-          key: _mapKey,
-          child: MapPage(location: OverviewLocation()),
-        ),
+        path: const OverviewLocation().path,
+        pageBuilder: (_, state) => mapPage(state),
       ),
       // Before `/:category`, which would also match `/list`.
       GoRoute(
-        path: '/list',
+        path: ListPage.path,
         pageBuilder: (_, state) =>
             NoTransitionPage<void>(key: state.pageKey, child: const ListPage()),
       ),
-      // The route patterns make each path parameter present, and the
-      // redirect has already sent every unknown slug elsewhere. So the `!`s
-      // in the routes below are safe.
-      GoRoute(
-        path: '/:category',
-        pageBuilder: (_, state) {
-          final params = state.pathParameters;
-          final category = content().withSlug(params['category']!)!;
-          return NoTransitionPage<void>(
-            key: _mapKey,
-            child: MapPage(location: CategoryLocation(category)),
-          );
-        },
-      ),
+      GoRoute(path: '/:category', pageBuilder: (_, state) => mapPage(state)),
       GoRoute(
         path: '/:category/:message',
-        pageBuilder: (_, state) {
-          final params = state.pathParameters;
-          final category = content().withSlug(params['category']!)!;
-          final message = category.messages.withSlug(params['message']!)!;
-          return NoTransitionPage<void>(
-            key: _mapKey,
-            child: MapPage(location: MessageLocation(category, message)),
-          );
-        },
+        pageBuilder: (_, state) => mapPage(state),
       ),
     ],
   );
-  ref.onDispose(router.dispose);
+
+  // The first map URL of a visit puts the camera there. Later ones fly.
+  var hasPlacedCamera = false;
+  void moveCameraToUrl() {
+    final location = mapLocationFor(
+      content(),
+      router.routerDelegate.currentConfiguration.uri,
+    );
+    if (location == null) return;
+    final navigation = ref.read(navigationProvider.notifier);
+    if (hasPlacedCamera) {
+      navigation.flyTo(location);
+    } else {
+      // The Router reads the first URL during the first build, where a
+      // provider must not change. The microtask runs after that build, and
+      // before the next pointer, key or browser event.
+      scheduleMicrotask(() => navigation.jumpTo(location));
+    }
+    hasPlacedCamera = true;
+  }
+
+  router.routerDelegate.addListener(moveCameraToUrl);
+  ref.onDispose(() {
+    router.routerDelegate.removeListener(moveCameraToUrl);
+    router.dispose();
+  });
   return router;
 });
 
@@ -65,20 +74,35 @@ final routerProvider = Provider<GoRouter>((ref) {
 /// place and the page keeps its state.
 const _mapKey = ValueKey('map');
 
-/// Where a URL with these path segments should go instead, or null if it is
-/// a page. A bad URL goes to the nearest page above it, so `/projects/nope`
-/// goes to `/projects`.
-String? redirectFor(List<Category> content, List<String> segments) {
-  if (segments.isEmpty) return null;
-  if (segments.first == 'list') return segments.length == 1 ? null : '/list';
+/// The map location of [url], or of the nearest page above it if no page
+/// has that URL. Null for the list view.
+MapLocation? mapLocationFor(List<Category> content, Uri url) {
+  if (url.isListView) return null;
 
-  final category = content.withSlug(segments.first);
-  if (category == null) return '/';
-  if (segments.length == 1) return null;
+  final segments = url.pathSegments;
+  final category = segments.isEmpty ? null : content.withSlug(segments.first);
+  if (category == null) return const OverviewLocation();
 
-  final message = category.messages.withSlug(segments[1]);
-  if (message == null) return '/${category.slug}';
-  if (segments.length == 2) return null;
+  final message = segments.length < 2
+      ? null
+      : category.messages.withSlug(segments[1]);
+  if (message == null) return CategoryLocation(category);
 
-  return '/${category.slug}/${message.slug}';
+  return MessageLocation(category, message);
+}
+
+/// Where [url] should go instead, or null if it is a page. A bad URL goes
+/// to the nearest page above it, so `/projects/nope` goes to `/projects`.
+String? redirectFor(List<Category> content, Uri url) {
+  if (url.isListView) {
+    return url.pathSegments.length == 1 ? null : ListPage.path;
+  }
+
+  final location = mapLocationFor(content, url)!;
+  return location.path == url.path ? null : location.path;
+}
+
+extension on Uri {
+  bool get isListView =>
+      pathSegments.isNotEmpty && '/${pathSegments.first}' == ListPage.path;
 }

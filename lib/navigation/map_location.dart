@@ -7,6 +7,9 @@ sealed class MapLocation {
 
   /// The location that Esc goes to. It is null at the overview.
   MapLocation? get parent;
+
+  /// The URL path of this location, such as `/projects/project-01`.
+  String get path;
 }
 
 /// The farthest view, at `/`.
@@ -15,6 +18,9 @@ final class OverviewLocation extends MapLocation {
 
   @override
   MapLocation? get parent => null;
+
+  @override
+  String get path => '/';
 
   @override
   bool operator ==(Object other) => other is OverviewLocation;
@@ -42,6 +48,9 @@ final class CategoryLocation extends BodyLocation {
   MapLocation get parent => const OverviewLocation();
 
   @override
+  String get path => '/${category.slug}';
+
+  @override
   bool operator ==(Object other) =>
       other is CategoryLocation && other.category == category;
 
@@ -61,6 +70,9 @@ final class MessageLocation extends BodyLocation {
 
   @override
   MapLocation get parent => CategoryLocation(category);
+
+  @override
+  String get path => '/${category.slug}/${message.slug}';
 
   @override
   bool operator ==(Object other) =>

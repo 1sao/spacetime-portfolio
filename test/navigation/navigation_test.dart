@@ -23,25 +23,25 @@ typedef _Setup = void Function(Navigation navigation, SceneClock clock);
 void main() {
   final projects = fakeContent.first;
 
-  final locations = <MapLocation>[
-    const OverviewLocation(),
-    for (final category in fakeContent) ...[
-      CategoryLocation(category),
-      for (final message in category.messages)
-        MessageLocation(category, message),
-    ],
-  ];
-
   /// The states that a visitor can be in, each as a name and a setup:
   ///
-  /// - At rest at each location.
+  /// - At rest at each location, also after a drag and a zoom in or out.
   /// - During a flight from each location to each other location.
   /// - During a flight that started during a different flight.
   final starts = <(String, _Setup)>[
-    for (final location in locations)
+    for (final location in fakeLocations)
       ('at ${location.name}', (navigation, _) => navigation.jumpTo(location)),
-    for (final from in locations)
-      for (final to in locations)
+    for (final location in fakeLocations)
+      for (final factor in [0.1, 10.0])
+        (
+          'at ${location.name}, turned and zoomed by $factor',
+          (navigation, _) => navigation
+            ..jumpTo(location)
+            ..turn(yaw: 4, pitch: 2)
+            ..zoom(factor),
+        ),
+    for (final from in fakeLocations)
+      for (final to in fakeLocations)
         if (from != to)
           (
             'during the flight from ${from.name} to ${to.name}',
@@ -52,9 +52,9 @@ void main() {
               clock.advanceBy(0.5);
             },
           ),
-    for (final from in locations)
-      for (final first in locations)
-        for (final second in locations)
+    for (final from in fakeLocations)
+      for (final first in fakeLocations)
+        for (final second in fakeLocations)
           if (from != first && first != second)
             (
               'during the flight to ${second.name} that started during the '
@@ -86,6 +86,8 @@ void main() {
       for (final isWaitingForEachFlight in [true, false]) {
         final (container, navigation, clock) = startedWith(setup);
         MapNavigationState state() => container.read(navigationProvider);
+        final isAtRestAtOverview =
+            state() is AtRest && state().location is OverviewLocation;
         void finishFlight() {
           if (state() case InFlight(:final flight)) {
             clock.advanceTo(flight.endTime);
@@ -108,14 +110,17 @@ void main() {
         expect(state().location, const OverviewLocation(), reason: reason);
         final rig = state().rigAt(clock.now);
         expect(rig.target.length, 0, reason: '$reason: target');
-        expect(rig.distance, overviewDistance, reason: '$reason: distance');
+        // At rest at the overview, Esc starts no flight, so a zoom stays.
+        if (!isAtRestAtOverview) {
+          expect(rig.distance, overviewDistance, reason: '$reason: distance');
+        }
       }
     }
   });
 
   test('the camera does not jump when a flight starts or ends', () {
     for (final (name, setup) in starts) {
-      for (final destination in locations) {
+      for (final destination in fakeLocations) {
         final (container, navigation, clock) = startedWith(setup);
         MapNavigationState state() => container.read(navigationProvider);
         final reason = '$name, to ${destination.name}';
@@ -167,6 +172,45 @@ void main() {
     navigation.endFinishedFlight();
     navigation.flyTo(location);
     expect(changes, 2, reason: 'after the flight');
+  });
+
+  test('a drag or a zoom at rest moves the camera without a new state', () {
+    for (final location in fakeLocations) {
+      final (container, navigation, clock) = startedWith(
+        (navigation, _) => navigation.jumpTo(location),
+      );
+      var changes = 0;
+      container.listen(navigationProvider, (_, _) => changes++);
+      final state = container.read(navigationProvider);
+      final before = state.rigAt(clock.now).camera;
+
+      navigation.turn(yaw: 0.2, pitch: 0.1);
+      final turned = state.rigAt(clock.now).camera;
+      navigation.zoom(1.2);
+      final zoomed = state.rigAt(clock.now).camera;
+
+      final reason = location.name;
+      expect(changes, 0, reason: reason);
+      expect(turned.distanceTo(before), greaterThan(0.01), reason: reason);
+      expect(zoomed.distanceTo(turned), greaterThan(0.01), reason: reason);
+    }
+  });
+
+  test('during a flight, a drag or a zoom does not move the camera', () {
+    final (container, navigation, clock) = startedWith((navigation, clock) {
+      navigation.flyTo(CategoryLocation(projects));
+      clock.advanceBy(0.5);
+    });
+    final state = container.read(navigationProvider) as InFlight;
+    final before = state.rigAt(clock.now).camera;
+    final arrival = state.arrival.framing;
+
+    navigation.turn(yaw: 0.2, pitch: 0.1);
+    navigation.zoom(1.2);
+
+    expect(state.rigAt(clock.now).camera.distanceTo(before), 0);
+    // The flight ends where it was going, so the camera does not jump.
+    expect(state.arrival.framing, same(arrival));
   });
 
   test('at rest, the camera frames the body of its location', () {

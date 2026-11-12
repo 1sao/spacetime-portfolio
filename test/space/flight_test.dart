@@ -39,23 +39,43 @@ void main() {
 
   /// The start rigs for the flights, each with the time when it applies:
   ///
-  /// - The overview at different angles, because a visitor can drag it.
-  /// - Each body in each of its framings.
+  /// - The overview at different angles and zooms, because a visitor can
+  ///   drag and zoom it.
+  /// - Each body in each of its framings, and turned and zoomed to the
+  ///   limits of its framing.
   /// - Points during flights, because a visitor can select a different body
   ///   before the camera arrives.
   final starts = <(String, CameraRig, double)>[
     for (final yaw in [0.0, math.pi / 2, math.pi, -math.pi / 2])
       for (final pitch in [-1.2, 0.0, 1.2])
-        (
-          'the overview at yaw $yaw, pitch $pitch',
-          Framing(
-            body: centralBody,
-            yaw: yaw,
-            pitch: pitch,
-            distance: overviewDistance,
-          ).rigAt(0),
-          0.0,
-        ),
+        for (final distance in [
+          overviewLimits.nearest,
+          overviewDistance,
+          overviewLimits.farthest,
+        ])
+          (
+            'the overview at yaw $yaw, pitch $pitch, distance $distance',
+            Framing(
+              body: centralBody,
+              yaw: yaw,
+              pitch: pitch,
+              distance: distance,
+              limits: overviewLimits,
+            ).rigAt(0),
+            0.0,
+          ),
+    for (final slug in bodies.keys)
+      for (final yaw in [-double.infinity, double.infinity])
+        for (final pitch in [-double.infinity, double.infinity])
+          for (final factor in [0.0, double.infinity])
+            (
+              '$slug turned by $yaw and $pitch, and zoomed by $factor',
+              Framing.ofCategory(bodies[slug]!)
+                  .turned(yaw: yaw, pitch: pitch, time: 0)
+                  .zoomed(factor)
+                  .rigAt(0),
+              0.0,
+            ),
     for (final slug in bodies.keys)
       for (final MapEntry(key: framed, value: framingOf) in framings.entries)
         for (final time in [0.0, 40.0])
