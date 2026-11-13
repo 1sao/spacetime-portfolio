@@ -1,5 +1,5 @@
 import '../space/body.dart';
-import '../space/camera_rig.dart';
+import '../space/camera.dart';
 import '../space/flight.dart';
 import '../space/framing.dart';
 import 'map_location.dart';
@@ -7,7 +7,7 @@ import 'map_location.dart';
 /// Where the visitor is on the map, and how the camera moves there.
 ///
 /// The state changes only when a flight starts or ends, and at a jump.
-/// [rigAt] may change each frame, but won't notify the listeners of
+/// [cameraAt] may change each frame, but won't notify the listeners of
 /// [MapNavigationState].
 sealed class MapNavigationState {
   MapNavigationState();
@@ -16,8 +16,8 @@ sealed class MapNavigationState {
   /// location that the flight goes to.
   MapLocation get location;
 
-  /// The rig at [time], in seconds on the clock of the scene.
-  CameraRig rigAt(double time);
+  /// The camera at [time], in seconds on the clock of the scene.
+  Camera cameraAt(double time);
 }
 
 /// The camera is at its location and frames the body of the location. No
@@ -31,12 +31,12 @@ final class AtRest extends MapNavigationState {
     : location = const OverviewLocation(),
       _framing = const Framing.overview();
 
-  /// The state at rest at the overview, with the yaw and pitch of [rig].
-  /// When [rig] is the camera's rig, the camera goes to the overview
+  /// The state at rest at the overview, with the angles of [camera]. When
+  /// [camera] is the current camera, the camera goes to the overview
   /// without a turn.
-  factory AtRest.atOverview(CameraRig rig) => AtRest._(
+  factory AtRest.atOverview(Camera camera) => AtRest._(
     location: const OverviewLocation(),
-    framing: Framing.overviewWithAnglesOf(rig),
+    framing: Framing.overviewWithAnglesOf(camera),
   );
 
   /// The state at rest at [location], with a framing of [body]. [body]
@@ -72,7 +72,7 @@ final class AtRest extends MapNavigationState {
   }
 
   @override
-  CameraRig rigAt(double time) => _framing.rigAt(time);
+  Camera cameraAt(double time) => _framing.cameraAt(time);
 }
 
 /// The camera flies to its location.
@@ -82,7 +82,7 @@ final class InFlight extends MapNavigationState {
   /// The movement of the camera.
   final Flight flight;
 
-  /// The state that starts when [flight] ends. Its rig is the destination
+  /// The state that starts when [flight] ends. Its camera is the destination
   /// of [flight], so the camera does not jump.
   final AtRest arrival;
 
@@ -90,5 +90,5 @@ final class InFlight extends MapNavigationState {
   MapLocation get location => arrival.location;
 
   @override
-  CameraRig rigAt(double time) => flight.rigAt(time);
+  Camera cameraAt(double time) => flight.cameraAt(time);
 }

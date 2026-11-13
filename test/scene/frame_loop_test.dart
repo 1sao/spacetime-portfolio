@@ -94,8 +94,7 @@ void main() {
     final frame = currentFrame.value;
     final expected = container
         .read(navigationProvider)
-        .rigAt(frame.time)
-        .camera
+        .cameraAt(frame.time)
         .position;
     expect(frame.camera.position.distanceTo(expected), 0);
 
@@ -117,7 +116,7 @@ void main() {
     MapNavigationState state() => container.read(navigationProvider);
     void expectCameraOfState(String reason) {
       final frame = currentFrame.value;
-      final expected = state().rigAt(frame.time).camera.position;
+      final expected = state().cameraAt(frame.time).position;
       expect(frame.camera.position.distanceTo(expected), 0, reason: reason);
     }
 
@@ -131,7 +130,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(state(), isA<InFlight>());
     expectCameraOfState('during the flight');
-    final overview = const Framing.overview().rigAt(0).camera.position;
+    final overview = const Framing.overview().cameraAt(0).position;
     expect(currentFrame.value.camera.position.distanceTo(overview), isNot(0));
 
     await tester.pump(const Duration(seconds: 3));

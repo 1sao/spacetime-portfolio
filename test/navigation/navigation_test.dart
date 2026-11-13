@@ -108,11 +108,15 @@ void main() {
         final reason = '$name, waiting: $isWaitingForEachFlight';
         expect(state(), isA<AtRest>(), reason: reason);
         expect(state().location, const OverviewLocation(), reason: reason);
-        final rig = state().rigAt(clock.now);
-        expect(rig.target.length, 0, reason: '$reason: target');
+        final camera = state().cameraAt(clock.now);
+        expect(camera.target.length, 0, reason: '$reason: target');
         // At rest at the overview, Esc starts no flight, so a zoom stays.
         if (!isAtRestAtOverview) {
-          expect(rig.distance, overviewDistance, reason: '$reason: distance');
+          expect(
+            camera.fromTarget.distance,
+            overviewDistance,
+            reason: '$reason: distance',
+          );
         }
       }
     }
@@ -125,9 +129,9 @@ void main() {
         MapNavigationState state() => container.read(navigationProvider);
         final reason = '$name, to ${destination.name}';
 
-        final before = state().rigAt(clock.now).camera;
+        final before = state().cameraAt(clock.now);
         navigation.flyTo(destination);
-        final after = state().rigAt(clock.now).camera;
+        final after = state().cameraAt(clock.now);
         expect(after.distanceTo(before), lessThan(1e-9), reason: reason);
 
         if (state() case InFlight(:final flight, :final arrival)) {
@@ -135,7 +139,7 @@ void main() {
           // as the flight does after its end.
           for (final time in [flight.endTime, flight.endTime + 10]) {
             expect(
-              arrival.rigAt(time).camera.distanceTo(flight.rigAt(time).camera),
+              arrival.cameraAt(time).distanceTo(flight.cameraAt(time)),
               lessThan(1e-9),
               reason: '$reason: arrival at ${time}s',
             );
@@ -182,12 +186,12 @@ void main() {
       var changes = 0;
       container.listen(navigationProvider, (_, _) => changes++);
       final state = container.read(navigationProvider);
-      final before = state.rigAt(clock.now).camera;
+      final before = state.cameraAt(clock.now);
 
       navigation.turn(yaw: 0.2, pitch: 0.1);
-      final turned = state.rigAt(clock.now).camera;
+      final turned = state.cameraAt(clock.now);
       navigation.zoom(1.2);
-      final zoomed = state.rigAt(clock.now).camera;
+      final zoomed = state.cameraAt(clock.now);
 
       final reason = location.name;
       expect(changes, 0, reason: reason);
@@ -202,13 +206,13 @@ void main() {
       clock.advanceBy(0.5);
     });
     final state = container.read(navigationProvider) as InFlight;
-    final before = state.rigAt(clock.now).camera;
+    final before = state.cameraAt(clock.now);
     final arrival = state.arrival.framing;
 
     navigation.turn(yaw: 0.2, pitch: 0.1);
     navigation.zoom(1.2);
 
-    expect(state.rigAt(clock.now).camera.distanceTo(before), 0);
+    expect(state.cameraAt(clock.now).distanceTo(before), 0);
     // The flight ends where it was going, so the camera does not jump.
     expect(state.arrival.framing, same(arrival));
   });
@@ -232,12 +236,16 @@ void main() {
   test('a jump to the overview keeps the yaw and pitch of the camera', () {
     for (final (name, setup) in starts) {
       final (container, navigation, clock) = startedWith(setup);
-      final before = container.read(navigationProvider).rigAt(clock.now);
+      final before = container.read(navigationProvider).cameraAt(clock.now);
       navigation.jumpTo(const OverviewLocation());
-      final after = container.read(navigationProvider).rigAt(clock.now);
-      expect(after.yaw, before.yaw, reason: name);
-      expect(after.pitch, before.pitch, reason: name);
-      expect(after.distance, overviewDistance, reason: name);
+      final after = container.read(navigationProvider).cameraAt(clock.now);
+      expect(after.fromTarget.azimuth, before.fromTarget.azimuth, reason: name);
+      expect(
+        after.fromTarget.elevation,
+        before.fromTarget.elevation,
+        reason: name,
+      );
+      expect(after.fromTarget.distance, overviewDistance, reason: name);
     }
   });
 
@@ -248,7 +256,7 @@ void main() {
         final (container, _, _) = startedWith(
           (navigation, _) => navigation.jumpTo(location),
         );
-        final camera = container.read(navigationProvider).rigAt(0).camera;
+        final camera = container.read(navigationProvider).cameraAt(0);
         return camera.position.distanceTo(body.positionAt(0));
       }
 

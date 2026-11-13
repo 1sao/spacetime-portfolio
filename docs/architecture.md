@@ -78,13 +78,16 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
   - The move takes 1.2 s for a small swing and up to 2.4 s for a half turn.
 - While focused, the camera turns with the body's orbit, so the hole stays
   almost in place on the screen. Idle auto-rotate runs only in the overview.
-- **The camera is a rig.** The rig is a target point, and the yaw, pitch
-  and distance of the camera around that point. Flights, drag and zoom
-  change the rig. The pitch stays a little less than straight up or down.
+- **Azimuth and elevation are world angles; yaw and pitch are turns from
+  straight behind a body.**
+- **The camera looks at a target.** It is a target point, and a
+  direction (azimuth and elevation) and distance from that point. Flights,
+  drag and zoom move it. The elevation stays a little less than
+  straight up or down.
   When the camera looks straight up or down, it has no horizontal right
   direction. Past that angle, the view turns upside down.
 - **A flight is a function of time.** It keeps its start, its destination
-  and its start time, and it calculates the rig for each time. Because of
+  and its start time, and it calculates the camera for each time. Because of
   this, the navigation state changes only when a flight starts or stops.
 - **A framing holds the camera at rest.** It is a body, and a yaw, a
   pitch and a distance from that body. The angles are measured from
@@ -98,11 +101,11 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
     0.85 rad of pitch from straight behind the body. The yaw limit keeps
     the camera almost as far from the central body as the body is, or
     farther. The pitch limit plus the steepest orbit tilt is less than the
-    rig's clamp. So a drag does not store a turn that the camera does not
+    camera's clamp. So a drag does not store a turn that the camera does not
     show. The zoom
     stays 1.5 to 8 units from the body, so the camera stays outside the
     framed body. Other bodies can pass through the camera.
-  - At the overview, any yaw, and the pitch of the rig's clamp. The zoom
+  - At the overview, any yaw, and the pitch of the camera's clamp. The zoom
     stays 24 to 60 units out.
   - During a flight, the visitor can't move the camera.
 
@@ -111,7 +114,7 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
 ```
 lib/
   content/     categories and messages: data only
-  space/       pure Dart, no Flutter imports: orbits, the camera rig, light
+  space/       pure Dart, no Flutter imports: orbits, the camera, light
                bending, projection, the per-frame snapshot
   navigation/  overview, focus, warp and the flights between them, as a
                Riverpod Notifier over a sealed state class
@@ -189,7 +192,7 @@ enforces the boundary.
     - A location is the overview, a category, or a message of a category.
       Each map URL is one location, and Esc goes to a location's parent.
     - The state is one of two kinds: at rest, or in flight. Each kind
-      gives its location and the camera rig for a time. During a flight,
+      gives its location and the camera for a time. During a flight,
       the location is the destination.
     - A flight to a category is a focus, and a flight to a message is a
       warp. The type of the location shows which it is.

@@ -45,7 +45,7 @@ final frameSnapshotListenableProvider =
       var navigation = ref.read(navigationProvider);
       FrameSnapshot frameAtClockTime() => FrameSnapshot.at(
         clock.now,
-        navigation.rigAt(clock.now).camera,
+        navigation.cameraAt(clock.now),
         bodiesInContentOrder,
       );
 

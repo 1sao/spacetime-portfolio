@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homepage_v2/space/body.dart';
-import 'package:homepage_v2/space/camera_rig.dart';
+import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
 import 'package:homepage_v2/space/framing.dart';
 import 'package:homepage_v2/space/site_space.dart';
@@ -62,7 +62,7 @@ void main() {
             );
             for (final time in timesAlongOrbitOf(body)) {
               expect(
-                framing.rigAt(time).camera.position.length,
+                framing.cameraAt(time).position.length,
                 greaterThanOrEqualTo(0.98 * body.positionAt(time).length),
                 reason:
                     '$slug, yaw $yaw, pitch $pitch, distance $distance, '
@@ -100,7 +100,7 @@ void main() {
           );
           for (final time in timesAlongOrbitOf(body)) {
             expect(
-              framing.rigAt(time).camera.position.length,
+              framing.cameraAt(time).position.length,
               lessThan(overviewLimits.nearest),
               reason: '$slug, yaw $yaw, pitch $pitch, at ${time}s',
             );
@@ -111,7 +111,7 @@ void main() {
   });
 
   test('at a body, the pitch limit keeps the camera within the pitch that '
-      'the rig allows', () {
+      'the camera allows', () {
     // A framing's pitch is measured from straight behind the body, so the
     // camera's own pitch is the body's elevation plus the framing's pitch.
     for (final MapEntry(key: slug, value: body) in bodies.entries) {
@@ -123,7 +123,7 @@ void main() {
           .reduce(math.max);
       expect(
         steepestElevation + bodyLimits.maxPitch,
-        lessThanOrEqualTo(maxPitch),
+        lessThanOrEqualTo(maxElevation),
         reason: slug,
       );
     }

@@ -24,17 +24,21 @@ class Navigation extends Notifier<MapNavigationState> {
     return AtRest.start();
   }
 
-  /// Starts a flight to [location] from the camera's rig at this time. If a
+  /// Starts a flight to [location] from the camera at this time. If a
   /// flight is in progress, the new flight replaces it and starts from where
   /// the camera is, so the camera does not jump.
   void flyTo(MapLocation location) {
     if (location == state.location) return;
 
     final now = _clock.now;
-    final from = state.rigAt(now);
+    final from = state.cameraAt(now);
     final arrival = _restAt(location);
     state = InFlight(
-      flight: Flight(from: from, startTime: now, destinationAt: arrival.rigAt),
+      flight: Flight(
+        from: from,
+        startTime: now,
+        destinationAt: arrival.cameraAt,
+      ),
       arrival: arrival,
     );
   }
@@ -76,7 +80,7 @@ class Navigation extends Notifier<MapNavigationState> {
   /// The state at rest at [location]. At the overview, the camera keeps the
   /// yaw and pitch that it has now, so it does not turn.
   AtRest _restAt(MapLocation location) => switch (location) {
-    OverviewLocation() => AtRest.atOverview(state.rigAt(_clock.now)),
+    OverviewLocation() => AtRest.atOverview(state.cameraAt(_clock.now)),
     BodyLocation() => AtRest.atBody(
       location,
       ref.read(bodiesProvider).of(location.category.slug),

@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homepage_v2/space/body.dart';
 import 'package:homepage_v2/space/camera.dart';
-import 'package:homepage_v2/space/camera_rig.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
 import 'package:homepage_v2/space/flight.dart';
 import 'package:homepage_v2/space/framing.dart';
@@ -16,13 +15,13 @@ const _step = 0.001;
 void main() {
   Flight toBody(
     String slug,
-    CameraRig from,
+    Camera from,
     double startTime, [
     Framing Function(Body) framingOf = Framing.ofCategory,
   ]) => Flight(
     from: from,
     startTime: startTime,
-    destinationAt: framingOf(bodies[slug]!).rigAt,
+    destinationAt: framingOf(bodies[slug]!).cameraAt,
   );
 
   /// The framings of a body: for its category, and for an open message.
@@ -31,13 +30,13 @@ void main() {
     'with a message': Framing.ofMessage,
   };
 
-  Flight toOverview(CameraRig from, double startTime) => Flight(
+  Flight toOverview(Camera from, double startTime) => Flight(
     from: from,
     startTime: startTime,
-    destinationAt: Framing.overviewWithAnglesOf(from).rigAt,
+    destinationAt: Framing.overviewWithAnglesOf(from).cameraAt,
   );
 
-  /// The start rigs for the flights, each with the time when it applies:
+  /// The start cameras for the flights, each with the time when it applies:
   ///
   /// - The overview at different angles and zooms, because a visitor can
   ///   drag and zoom it.
@@ -45,7 +44,7 @@ void main() {
   ///   limits of its framing.
   /// - Points during flights, because a visitor can select a different body
   ///   before the camera arrives.
-  final starts = <(String, CameraRig, double)>[
+  final starts = <(String, Camera, double)>[
     for (final yaw in [0.0, math.pi / 2, math.pi, -math.pi / 2])
       for (final pitch in [-1.2, 0.0, 1.2])
         for (final distance in [
@@ -61,7 +60,7 @@ void main() {
               pitch: pitch,
               distance: distance,
               limits: overviewLimits,
-            ).rigAt(0),
+            ).cameraAt(0),
             0.0,
           ),
     for (final slug in bodies.keys)
@@ -73,7 +72,7 @@ void main() {
               Framing.ofCategory(bodies[slug]!)
                   .turned(byYaw: yaw, byPitch: pitch)
                   .zoomed(factor)
-                  .rigAt(0),
+                  .cameraAt(0),
               0.0,
             ),
     for (final slug in bodies.keys)
@@ -81,7 +80,7 @@ void main() {
         for (final time in [0.0, 40.0])
           (
             '$slug $framed at ${time}s',
-            framingOf(bodies[slug]!).rigAt(time),
+            framingOf(bodies[slug]!).cameraAt(time),
             time,
           ),
     for (final (name, flight) in [
@@ -90,29 +89,29 @@ void main() {
           if (from != to)
             (
               'from $from to $to',
-              toBody(to, Framing.ofCategory(bodies[from]!).rigAt(0), 0),
+              toBody(to, Framing.ofCategory(bodies[from]!).cameraAt(0), 0),
             ),
       for (final slug in bodies.keys) ...[
         (
           'from the overview to $slug',
-          toBody(slug, const Framing.overview().rigAt(0), 0),
+          toBody(slug, const Framing.overview().cameraAt(0), 0),
         ),
         (
           'from $slug to the overview',
-          toOverview(Framing.ofCategory(bodies[slug]!).rigAt(0), 0),
+          toOverview(Framing.ofCategory(bodies[slug]!).cameraAt(0), 0),
         ),
       ],
     ])
       for (final fraction in [0.1, 0.3, 0.5, 0.7])
         (
           '$fraction of the way $name',
-          flight.rigAt(flight.duration * fraction),
+          flight.cameraAt(flight.duration * fraction),
           flight.duration * fraction,
         ),
   ];
 
   /// All flights from all starts, to each framing of each body and to the
-  /// overview. Each flight has the rigs of its destination at its start
+  /// overview. Each flight has the cameras of its destination at its start
   /// time and at its end time. For a flight to the overview, this value is
   /// null, because the destination does not move.
   final flights = [
@@ -125,8 +124,8 @@ void main() {
               'from $startName to $slug $framed',
               flight,
               (
-                framingOf(body).rigAt(flight.startTime),
-                framingOf(body).rigAt(flight.endTime),
+                framingOf(body).cameraAt(flight.startTime),
+                framingOf(body).cameraAt(flight.endTime),
               ),
             );
           }(),
@@ -135,12 +134,12 @@ void main() {
   ];
 
   test('the overview is the farthest view', () {
-    final overview = const Framing.overview().rigAt(0).camera.position.length;
+    final overview = const Framing.overview().cameraAt(0).position.length;
     for (final MapEntry(key: slug, value: body) in bodies.entries) {
       for (final MapEntry(key: framed, value: framingOf) in framings.entries) {
         final flight = toBody(
           slug,
-          const Framing.overview().rigAt(0),
+          const Framing.overview().cameraAt(0),
           0,
           framingOf,
         );
@@ -148,7 +147,7 @@ void main() {
         for (var i = 0; i < 100; i++) {
           final time = flight.endTime + period * i / 100;
           expect(
-            flight.rigAt(time).camera.position.length,
+            flight.cameraAt(time).position.length,
             lessThan(overview),
             reason: '$slug $framed at ${time}s',
           );
@@ -161,7 +160,7 @@ void main() {
     for (final (name, flight, _) in flights) {
       for (var time = flight.startTime; time <= flight.endTime; time += _step) {
         expect(
-          flight.rigAt(time).camera.position.length,
+          flight.cameraAt(time).position.length,
           greaterThan(centralBody.radius),
           reason: '$name at ${time}s',
         );
@@ -170,19 +169,19 @@ void main() {
   });
 
   test('a flight starts at the camera position and stops without a jump', () {
-    // Use times very near each end. At the ends, rigAt gives the start rig
-    // and the destination rig directly, and the test does not examine the eased
+    // Use times very near each end. At the ends, cameraAt gives the start camera
+    // and the destination camera directly, and the test does not examine the eased
     // path.
     for (final (name, flight, _) in flights) {
-      final start = flight.from.camera.position;
+      final start = flight.from.position;
       expect(
-        flight.rigAt(flight.startTime + 1e-9).camera.position.distanceTo(start),
+        flight.cameraAt(flight.startTime + 1e-9).position.distanceTo(start),
         lessThan(1e-6),
         reason: '$name: start',
       );
-      final end = flight.rigAt(flight.endTime).camera.position;
+      final end = flight.cameraAt(flight.endTime).position;
       expect(
-        flight.rigAt(flight.endTime - 1e-9).camera.position.distanceTo(end),
+        flight.cameraAt(flight.endTime - 1e-9).position.distanceTo(end),
         lessThan(1e-6),
         reason: '$name: end',
       );
@@ -191,18 +190,21 @@ void main() {
 
   test('a flight turns the camera the shorter way', () {
     for (final (name, flight, destination) in flights) {
-      // The yaw of the camera turns a half turn or less to the destination at
+      // The azimuth of the camera turns a half turn or less to the destination at
       // the start time. It also turns as much as the destination turns,
       // because the body moves along its orbit.
       final destinationTurn = destination == null
           ? 0.0
-          : wrapAngle(destination.$2.yaw - destination.$1.yaw);
+          : wrapAngle(
+              destination.$2.fromTarget.azimuth -
+                  destination.$1.fromTarget.azimuth,
+            );
       var turn = 0.0;
-      var yaw = flight.from.yaw;
+      var azimuth = flight.from.fromTarget.azimuth;
       for (var time = flight.startTime; time <= flight.endTime; time += _step) {
-        final next = flight.rigAt(time).yaw;
-        turn += wrapAngle(next - yaw);
-        yaw = next;
+        final next = flight.cameraAt(time).fromTarget.azimuth;
+        turn += wrapAngle(next - azimuth);
+        azimuth = next;
       }
       expect(
         turn.abs(),
@@ -219,7 +221,7 @@ void main() {
         final framing = framingOf(body);
         final flight = toBody(
           slug,
-          const Framing.overview().rigAt(0),
+          const Framing.overview().cameraAt(0),
           0,
           framingOf,
         );
@@ -228,7 +230,7 @@ void main() {
           flight.endTime + 10,
           flight.endTime + 37,
         ]) {
-          final camera = flight.rigAt(time).camera;
+          final camera = flight.cameraAt(time);
           final bodyPosition = body.positionAt(time);
           final reason = '$slug $framed at ${time}s';
 

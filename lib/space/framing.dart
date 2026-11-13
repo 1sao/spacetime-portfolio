@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'body.dart';
-import 'camera_rig.dart';
+import 'camera.dart';
 import 'direction_and_distance.dart';
 import 'site_space.dart';
 
@@ -35,10 +35,12 @@ class FramingLimits {
   final double farthest;
 }
 
-/// The limits at the overview: any yaw, and the pitch that the rig allows.
+/// The limits at the overview: any yaw, and the camera's own elevation
+/// limit as the pitch limit. At the central body, a framing's pitch is the
+/// camera's elevation (see [Framing]), so the two limits are the same.
 const overviewLimits = FramingLimits(
   maxYaw: double.infinity,
-  maxPitch: maxPitch,
+  maxPitch: maxElevation,
   nearest: 24,
   farthest: 60,
 );
@@ -54,8 +56,9 @@ const overviewLimits = FramingLimits(
 /// limit below, the camera stays at least 0.98 of the body's distance from
 /// the central body, for every orbit tilt.
 ///
-/// The pitch limit plus the steepest orbit tilt is less than [maxPitch].
-/// So a drag never stores a turn that the camera does not show.
+/// The pitch limit plus the steepest orbit tilt is less than
+/// [maxElevation]. So a drag never stores a turn that the camera does not
+/// show.
 ///
 /// The nearest distance is more than the radius of every body, so the
 /// camera stays outside the framed body. These limits do not keep the
@@ -70,17 +73,11 @@ const bodyLimits = FramingLimits(
 /// Where the camera is around a body: a yaw, a pitch and a distance from
 /// the body.
 ///
-/// The angles are measured from the position directly behind the body.
-/// That position is on the line from the central body, at the origin,
-/// through the body, on the side away from the central body. When the body
-/// moves along its orbit, the camera keeps the same angles to that line.
-/// So the central body stays at almost the same position on the screen. It
-/// moves a little on a tilted orbit, because the angles are a yaw and a
-/// pitch, not a fixed rotation.
-///
-/// The central body has no direction from the origin. For the central
-/// body, the angles are measured from azimuth 0 and elevation 0, so they
-/// are the camera's own yaw and pitch.
+/// The angles are measured from straight behind the body. Straight behind
+/// a body is the direction from the central body through the body. So the
+/// camera turns with the
+/// orbit. For the central body, they are the camera's own azimuth and
+/// elevation.
 class Framing {
   const Framing({
     required this.body,
@@ -98,12 +95,13 @@ class Framing {
       distance = overviewDistance,
       limits = overviewLimits;
 
-  /// The overview, seen with the yaw and pitch of [rig]. A flight to the
-  /// overview ends here, so the camera moves out without a turn.
-  Framing.overviewWithAnglesOf(CameraRig rig)
+  /// The overview, with the camera at the azimuth and elevation that
+  /// [camera] has from its target. Navigation gives the current camera, so
+  /// at the overview the camera looks in the same direction as before.
+  Framing.overviewWithAnglesOf(Camera camera)
     : body = centralBody,
-      yaw = rig.yaw,
-      pitch = rig.pitch,
+      yaw = camera.fromTarget.azimuth,
+      pitch = camera.fromTarget.elevation,
       distance = overviewDistance,
       limits = overviewLimits;
 
@@ -125,11 +123,11 @@ class Framing {
   /// The body that the camera looks at.
   final Body body;
 
-  /// The angle around world y from the position directly behind [body] to
+  /// The angle around world y from straight behind [body] to
   /// the camera, in rad.
   final double yaw;
 
-  /// The angle up from the position directly behind [body] to the camera,
+  /// The angle up from straight behind [body] to the camera,
   /// in rad.
   final double pitch;
 
@@ -158,15 +156,17 @@ class Framing {
     limits: limits,
   );
 
-  /// The rig at [time], in seconds on the clock of the scene.
-  CameraRig rigAt(double time) {
+  /// The camera at [time], in seconds on the clock of the scene.
+  Camera cameraAt(double time) {
     final bodyPosition = body.positionAt(time);
     final behind = DirectionAndDistance.of(bodyPosition);
-    return CameraRig(
+    return Camera(
       target: bodyPosition,
-      yaw: behind.azimuth + yaw,
-      pitch: behind.elevation + pitch,
-      distance: distance,
+      fromTarget: DirectionAndDistance(
+        azimuth: behind.azimuth + yaw,
+        elevation: behind.elevation + pitch,
+        distance: distance,
+      ),
     );
   }
 }
