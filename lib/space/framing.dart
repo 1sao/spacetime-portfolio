@@ -35,35 +35,34 @@ class FramingLimits {
   final double farthest;
 }
 
-/// The limits at the overview: any yaw and pitch. [Framing.turned] keeps the
-/// pitch within the rig's clamp.
+/// The limits at the overview: any yaw, and the pitch that the rig allows.
 const overviewLimits = FramingLimits(
   maxYaw: double.infinity,
-  maxPitch: double.infinity,
+  maxPitch: maxPitch,
   nearest: 24,
   farthest: 60,
 );
 
-/// The limits at a category's body: a quarter turn of yaw and a quarter turn
-/// of pitch from straight behind the body. Together, they turn the camera
-/// up to about 116° from straight behind on the most tilted orbit. On an
-/// orbit of radius R, the camera then stays at least 0.89 R from the
-/// central body, for every distance from the body.
+/// The limits at a category's body.
 ///
-/// Why 0.89: with θ the angle at the body from straight behind to the
-/// camera, and d the distance from the body, the camera is
-/// √(R² + d² + 2·R·d·cos θ) from the central body. Yaw and pitch of up to
-/// π/2 each give cos θ ≥ −|sin(2e)| / 2, where e is the elevation of the
-/// body.
-/// The orbits tilt 0.55 rad at most, so cos θ ≥ −0.45, and the distance is
-/// at least √(R² + d² − 0.9·R·d) ≥ 0.89 R.
+/// The yaw limit keeps the camera beside the body or behind it, so the
+/// camera is about as far from the central body as the body is, or
+/// farther. It can be a little nearer, because yaw turns around world y
+/// and not around straight behind the body: when the body is above the
+/// xz plane and the camera is turned down, or the opposite, a quarter turn
+/// of yaw puts the camera a little in front of the body. With the pitch
+/// limit below, the camera stays at least 0.98 of the body's distance from
+/// the central body, for every orbit tilt.
+///
+/// The pitch limit plus the steepest orbit tilt is less than [maxPitch].
+/// So a drag never stores a turn that the camera does not show.
 ///
 /// The nearest distance is more than the radius of every body, so the
 /// camera stays outside the framed body. These limits do not keep the
 /// camera outside other bodies.
 const bodyLimits = FramingLimits(
   maxYaw: math.pi / 2,
-  maxPitch: math.pi / 2,
+  maxPitch: 0.85,
   nearest: 1.5,
   farthest: 8,
 );
@@ -140,29 +139,15 @@ class Framing {
   /// How far drag and zoom can change this framing.
   final FramingLimits limits;
 
-  /// This framing, turned by [yaw] and [pitch], in rad, within [limits].
-  /// Also, the rig's pitch at [time] stays within ±[maxPitch], the range
-  /// that [CameraRig] allows.
-  Framing turned({
-    required double yaw,
-    required double pitch,
-    required double time,
-  }) {
-    final behindElevation = DirectionAndDistance.of(body.positionAt(time))
-        .elevation;
-    return Framing(
-      body: body,
-      yaw: (this.yaw + yaw).clamp(-limits.maxYaw, limits.maxYaw),
-      // The second clamp keeps the rig's pitch within ±[maxPitch]. It can't
-      // move the pitch out of [limits], because both ranges contain
-      // -behindElevation, the pitch of a level camera.
-      pitch: (this.pitch + pitch)
-          .clamp(-limits.maxPitch, limits.maxPitch)
-          .clamp(-maxPitch - behindElevation, maxPitch - behindElevation),
-      distance: distance,
-      limits: limits,
-    );
-  }
+  /// This framing, turned by [byYaw] and [byPitch], in rad, within
+  /// [limits].
+  Framing turned({required double byYaw, required double byPitch}) => Framing(
+    body: body,
+    yaw: (yaw + byYaw).clamp(-limits.maxYaw, limits.maxYaw),
+    pitch: (pitch + byPitch).clamp(-limits.maxPitch, limits.maxPitch),
+    distance: distance,
+    limits: limits,
+  );
 
   /// This framing, with its distance times [factor], within [limits].
   Framing zoomed(double factor) => Framing(

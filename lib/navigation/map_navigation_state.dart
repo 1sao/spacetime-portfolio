@@ -60,13 +60,9 @@ final class AtRest extends MapNavigationState {
   Framing _framing;
 
   /// Turns the camera by [yaw] and [pitch], in rad, within the limits of
-  /// the framing at [time].
-  void turn({
-    required double yaw,
-    required double pitch,
-    required double time,
-  }) {
-    _framing = _framing.turned(yaw: yaw, pitch: pitch, time: time);
+  /// the framing.
+  void turn({required double yaw, required double pitch}) {
+    _framing = _framing.turned(byYaw: yaw, byPitch: pitch);
   }
 
   /// Multiplies the distance of the camera by [factor], within the limits of

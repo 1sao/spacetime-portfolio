@@ -94,14 +94,16 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
   are the camera's own yaw and pitch. Drag and zoom change every framing in
   the same way.
 - **Drag and zoom have limits,** as data on each framing.
-  - At a body, a drag turns the camera at most a quarter turn of yaw and a
-    quarter turn of pitch from straight behind the body. So the camera
-    stays at least 0.89 times the orbit's radius from the central body. The zoom stays 1.5 to 8 units from the
-    body, so the camera stays outside the framed body. Other bodies can
-    pass through the camera.
-  - At the overview, any yaw. The zoom stays 24 to 60 units out.
-  - The camera's own pitch stays within the rig's clamp at the time of the
-    drag. So a drag does not store a turn that the camera does not show.
+  - At a body, a drag turns the camera at most a quarter turn of yaw and
+    0.85 rad of pitch from straight behind the body. The yaw limit keeps
+    the camera almost as far from the central body as the body is, or
+    farther. The pitch limit plus the steepest orbit tilt is less than the
+    rig's clamp. So a drag does not store a turn that the camera does not
+    show. The zoom
+    stays 1.5 to 8 units from the body, so the camera stays outside the
+    framed body. Other bodies can pass through the camera.
+  - At the overview, any yaw, and the pitch of the rig's clamp. The zoom
+    stays 24 to 60 units out.
   - During a flight, the visitor can't move the camera.
 
 ## Layers

@@ -71,7 +71,7 @@ void main() {
             (
               '$slug turned by $yaw and $pitch, and zoomed by $factor',
               Framing.ofCategory(bodies[slug]!)
-                  .turned(yaw: yaw, pitch: pitch, time: 0)
+                  .turned(byYaw: yaw, byPitch: pitch)
                   .zoomed(factor)
                   .rigAt(0),
               0.0,

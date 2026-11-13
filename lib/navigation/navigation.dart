@@ -51,7 +51,7 @@ class Navigation extends Notifier<MapNavigationState> {
   void turn({required double yaw, required double pitch}) {
     final current = state;
     if (current is! AtRest) return;
-    current.turn(yaw: yaw, pitch: pitch, time: _clock.now);
+    current.turn(yaw: yaw, pitch: pitch);
   }
 
   /// Multiplies the distance from the camera to the framed body by
