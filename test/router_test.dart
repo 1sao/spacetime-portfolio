@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:homepage_v2/content/content.dart';
 import 'package:homepage_v2/navigation/map_location.dart';
 import 'package:homepage_v2/navigation/map_navigation_state.dart';
-import 'package:homepage_v2/navigation/navigation.dart';
 import 'package:homepage_v2/providers.dart';
 import 'package:homepage_v2/router.dart';
 import 'package:homepage_v2/ui/list_page.dart';
@@ -72,7 +71,6 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    final router = tester.container().read(routerProvider);
     final page = tester.element(find.byType(MapPage));
     final projects = fakeContent.first;
 
@@ -81,9 +79,7 @@ void main() {
       ('/projects/two', MessageLocation(projects, projects.messages[1])),
       ('/', const OverviewLocation()),
     ]) {
-      router.go(path);
-      // The scene ticks every frame, so the map page never settles.
-      await tester.pump();
+      await tester.goTo(path);
 
       final map = tester.widget<MapPage>(find.byType(MapPage));
       expect(tester.element(find.byType(MapPage)), same(page), reason: path);
@@ -97,35 +93,31 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester, firstPath: '/projects/one');
-    final container = tester.container();
-    MapNavigationState state() => container.read(navigationProvider);
 
     // No frame is pumped here: the jump must be done before the scene's
     // first frame.
-    expect(state(), isA<AtRest>());
-    expect(state().location, MessageLocation(projects, projects.messages[0]));
+    expect(tester.navigationState, isA<AtRest>());
+    expect(
+      tester.navigationState.location,
+      MessageLocation(projects, projects.messages[0]),
+    );
 
-    container.read(routerProvider).go('/projects');
-    await tester.pump();
-    expect(state(), isA<InFlight>());
-    expect(state().location, CategoryLocation(projects));
+    await tester.goTo('/projects');
+    expect(tester.navigationState, isA<InFlight>());
+    expect(tester.navigationState.location, CategoryLocation(projects));
   });
 
   testWidgets('back and forward fly the camera', (tester) async {
     await pumpApp(tester);
-    final container = tester.container();
-    final router = container.read(routerProvider);
-    MapNavigationState state() => container.read(navigationProvider);
+    final router = tester.router;
 
     // The browser sends a URL without a state for a new history entry, and
     // with the state that go_router saved for back and forward.
-    router.go('/projects');
-    await tester.pump();
+    await tester.goTo('/projects');
     final saved = router.routeInformationParser.restoreRouteInformation(
       router.routerDelegate.currentConfiguration,
     )!;
-    router.go('/');
-    await tester.pump();
+    await tester.goTo('/');
 
     for (final (name, location, routeState) in [
       ('without a state', '/contact', null),
@@ -133,8 +125,8 @@ void main() {
     ]) {
       await _pushRouteInformation(tester, location, routeState);
       await tester.pump();
-      expect(state(), isA<InFlight>(), reason: name);
-      expect(state().location.path, location, reason: name);
+      expect(tester.navigationState, isA<InFlight>(), reason: name);
+      expect(tester.navigationState.location.path, location, reason: name);
     }
   });
 
@@ -142,13 +134,11 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    final container = tester.container();
-    final router = container.read(routerProvider);
-    final clock = container.read(sceneClockProvider);
+    final clock = tester.container().read(sceneClockProvider);
     await tester.pump(const Duration(seconds: 1));
-    final before = container.read(navigationProvider);
+    final before = tester.navigationState;
 
-    router.go(ListPage.path);
+    tester.router.go(ListPage.path);
     // The scene ticks for two more frames: the map page goes away in the
     // first, and the provider that owns the ticker after the second.
     await tester.pump(const Duration(milliseconds: 16));
@@ -156,11 +146,10 @@ void main() {
     final time = clock.now;
     await tester.pump(const Duration(seconds: 5));
     expect(clock.now, time);
-    expect(container.read(navigationProvider), same(before));
+    expect(tester.navigationState, same(before));
 
-    router.go('/');
-    await tester.pump();
-    expect(container.read(navigationProvider), same(before));
+    await tester.goTo('/');
+    expect(tester.navigationState, same(before));
   });
 }
 

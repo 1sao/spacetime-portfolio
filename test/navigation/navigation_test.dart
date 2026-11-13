@@ -9,13 +9,8 @@ import 'package:homepage_v2/space/scene_clock.dart';
 import 'package:homepage_v2/space/site_space.dart';
 import 'package:riverpod/riverpod.dart';
 
+import '../camera_matchers.dart';
 import '../fake_content.dart';
-
-// TODO: Split these tests by concern. The parent chain of the locations
-// is a property of `MapLocation` alone. That a message is nearer than its
-// category is a property of the framings in `site_space.dart`. This file
-// should keep only the transitions of `Navigation`: the end states, the
-// camera without jumps, and when the state changes.
 
 /// Puts a new navigation into the state that a test starts from.
 typedef _Setup = void Function(Navigation navigation, SceneClock clock);
@@ -30,11 +25,11 @@ void main() {
   /// - During a flight that started during a different flight.
   final starts = <(String, _Setup)>[
     for (final location in fakeLocations)
-      ('at ${location.name}', (navigation, _) => navigation.jumpTo(location)),
+      ('at ${location.path}', (navigation, _) => navigation.jumpTo(location)),
     for (final location in fakeLocations)
       for (final factor in [0.1, 10.0])
         (
-          'at ${location.name}, turned and zoomed by $factor',
+          'at ${location.path}, turned and zoomed by $factor',
           (navigation, _) => navigation
             ..jumpTo(location)
             ..turn(yaw: 4, pitch: 2)
@@ -44,7 +39,7 @@ void main() {
       for (final to in fakeLocations)
         if (from != to)
           (
-            'during the flight from ${from.name} to ${to.name}',
+            'during the flight from ${from.path} to ${to.path}',
             (navigation, clock) {
               navigation.jumpTo(from);
               clock.advanceBy(3);
@@ -57,8 +52,8 @@ void main() {
         for (final second in fakeLocations)
           if (from != first && first != second)
             (
-              'during the flight to ${second.name} that started during the '
-                  'flight from ${from.name} to ${first.name}',
+              'during the flight to ${second.path} that started during the '
+                  'flight from ${from.path} to ${first.path}',
               (navigation, clock) {
                 navigation.jumpTo(from);
                 navigation.flyTo(first);
@@ -69,51 +64,31 @@ void main() {
             ),
   ];
 
-  ProviderContainer newContainer() => ProviderContainer.test(
-    overrides: [bodiesProvider.overrideWithValue(fakeBodies)],
-  );
-
-  (ProviderContainer, Navigation, SceneClock) startedWith(_Setup setup) {
-    final container = newContainer();
-    final navigation = container.read(navigationProvider.notifier);
-    final clock = container.read(sceneClockProvider);
-    setup(navigation, clock);
-    return (container, navigation, clock);
-  }
-
-  test('Esc from each state ends in the overview', () {
+  test('Esc from each state ends at rest at the overview', () {
     for (final (name, setup) in starts) {
       for (final isWaitingForEachFlight in [true, false]) {
-        final (container, navigation, clock) = startedWith(setup);
-        MapNavigationState state() => container.read(navigationProvider);
-        final isAtRestAtOverview =
-            state() is AtRest && state().location is OverviewLocation;
-        void finishFlight() {
-          if (state() case InFlight(:final flight)) {
-            clock.advanceTo(flight.endTime);
-            navigation.endFinishedFlight();
-          }
-        }
+        final visit = _Visit(setup);
+        final wasAtRestAtOverview =
+            visit.state is AtRest && visit.state.location is OverviewLocation;
 
-        var presses = 0;
-        MapLocation? parent;
-        while ((parent = state().location.parent) != null) {
-          navigation.flyTo(parent!);
-          if (isWaitingForEachFlight) finishFlight();
-          presses++;
-          expect(presses, lessThanOrEqualTo(2), reason: name);
+        // Three presses at most, so a wrong parent fails the test instead
+        // of hanging it.
+        for (var presses = 0; presses < 3; presses++) {
+          final parent = visit.state.location.parent;
+          if (parent == null) break;
+          visit.navigation.flyTo(parent);
+          if (isWaitingForEachFlight) visit.finishFlight();
         }
-        finishFlight();
+        visit.finishFlight();
 
         final reason = '$name, waiting: $isWaitingForEachFlight';
-        expect(state(), isA<AtRest>(), reason: reason);
-        expect(state().location, const OverviewLocation(), reason: reason);
-        final camera = state().cameraAt(clock.now);
-        expect(camera.target.length, 0, reason: '$reason: target');
+        expect(visit.state, isA<AtRest>(), reason: reason);
+        expect(visit.state.location, const OverviewLocation(), reason: reason);
+        expect(visit.camera.target.length, 0, reason: '$reason: target');
         // At rest at the overview, Esc starts no flight, so a zoom stays.
-        if (!isAtRestAtOverview) {
+        if (!wasAtRestAtOverview) {
           expect(
-            camera.fromTarget.distance,
+            visit.camera.fromTarget.distance,
             overviewDistance,
             reason: '$reason: distance',
           );
@@ -125,22 +100,20 @@ void main() {
   test('the camera does not jump when a flight starts or ends', () {
     for (final (name, setup) in starts) {
       for (final destination in fakeLocations) {
-        final (container, navigation, clock) = startedWith(setup);
-        MapNavigationState state() => container.read(navigationProvider);
-        final reason = '$name, to ${destination.name}';
+        final visit = _Visit(setup);
+        final reason = '$name, to ${destination.path}';
 
-        final before = state().cameraAt(clock.now);
-        navigation.flyTo(destination);
-        final after = state().cameraAt(clock.now);
-        expect(after.distanceTo(before), lessThan(1e-9), reason: reason);
+        final before = visit.camera;
+        visit.navigation.flyTo(destination);
+        expect(visit.camera, isCameraCloseTo(before), reason: reason);
 
-        if (state() case InFlight(:final flight, :final arrival)) {
+        if (visit.state case InFlight(:final flight, :final arrival)) {
           // The later time shows that the camera at rest follows the body
           // as the flight does after its end.
           for (final time in [flight.endTime, flight.endTime + 10]) {
             expect(
-              arrival.cameraAt(time).distanceTo(flight.cameraAt(time)),
-              lessThan(1e-9),
+              arrival.cameraAt(time),
+              isCameraCloseTo(flight.cameraAt(time)),
               reason: '$reason: arrival at ${time}s',
             );
           }
@@ -150,69 +123,71 @@ void main() {
   });
 
   test('during a flight and at rest, the state does not change', () {
-    final container = newContainer();
-    final navigation = container.read(navigationProvider.notifier);
-    final clock = container.read(sceneClockProvider);
+    final visit = _Visit();
     var changes = 0;
-    container.listen(navigationProvider, (_, _) => changes++);
+    visit.container.listen(navigationProvider, (_, _) => changes++);
     final location = CategoryLocation(projects);
 
-    navigation.flyTo(location);
+    visit.navigation.flyTo(location);
     expect(changes, 1, reason: 'the flight starts');
-    final flight = (container.read(navigationProvider) as InFlight).flight;
+    final flight = (visit.state as InFlight).flight;
 
-    navigation.flyTo(location);
-    clock.advanceTo(flight.endTime - 0.01);
-    navigation.endFinishedFlight();
+    visit.navigation.flyTo(location);
+    visit.clock.advanceTo(flight.endTime - 0.01);
+    visit.navigation.endFinishedFlight();
     expect(changes, 1, reason: 'during the flight');
 
-    clock.advanceTo(flight.endTime);
-    navigation.endFinishedFlight();
+    visit.clock.advanceTo(flight.endTime);
+    visit.navigation.endFinishedFlight();
     expect(changes, 2, reason: 'the flight ends');
-    expect(container.read(navigationProvider), isA<AtRest>());
-    expect(container.read(navigationProvider).location, location);
+    expect(visit.state, isA<AtRest>());
+    expect(visit.state.location, location);
 
-    clock.advanceBy(5);
-    navigation.endFinishedFlight();
-    navigation.flyTo(location);
+    visit.clock.advanceBy(5);
+    visit.navigation.endFinishedFlight();
+    visit.navigation.flyTo(location);
     expect(changes, 2, reason: 'after the flight');
   });
 
   test('a drag or a zoom at rest moves the camera without a new state', () {
     for (final location in fakeLocations) {
-      final (container, navigation, clock) = startedWith(
-        (navigation, _) => navigation.jumpTo(location),
-      );
+      final visit = _Visit((navigation, _) => navigation.jumpTo(location));
       var changes = 0;
-      container.listen(navigationProvider, (_, _) => changes++);
-      final state = container.read(navigationProvider);
-      final before = state.cameraAt(clock.now);
+      visit.container.listen(navigationProvider, (_, _) => changes++);
+      final before = visit.camera;
 
-      navigation.turn(yaw: 0.2, pitch: 0.1);
-      final turned = state.cameraAt(clock.now);
-      navigation.zoom(1.2);
-      final zoomed = state.cameraAt(clock.now);
+      visit.navigation.turn(yaw: 0.2, pitch: 0.1);
+      final turned = visit.camera;
+      visit.navigation.zoom(1.2);
 
-      final reason = location.name;
+      final reason = location.path;
       expect(changes, 0, reason: reason);
-      expect(turned.distanceTo(before), greaterThan(0.01), reason: reason);
-      expect(zoomed.distanceTo(turned), greaterThan(0.01), reason: reason);
+      expect(
+        turned,
+        isNot(isCameraCloseTo(before, tolerance: 0.01)),
+        reason: reason,
+      );
+      expect(
+        visit.camera,
+        isNot(isCameraCloseTo(turned, tolerance: 0.01)),
+        reason: reason,
+      );
     }
   });
 
   test('during a flight, a drag or a zoom does not move the camera', () {
-    final (container, navigation, clock) = startedWith((navigation, clock) {
+    final visit = _Visit((navigation, clock) {
       navigation.flyTo(CategoryLocation(projects));
       clock.advanceBy(0.5);
     });
-    final state = container.read(navigationProvider) as InFlight;
-    final before = state.cameraAt(clock.now);
+    final state = visit.state as InFlight;
+    final before = visit.camera;
     final arrival = state.arrival.framing;
 
-    navigation.turn(yaw: 0.2, pitch: 0.1);
-    navigation.zoom(1.2);
+    visit.navigation.turn(yaw: 0.2, pitch: 0.1);
+    visit.navigation.zoom(1.2);
 
-    expect(state.cameraAt(clock.now).distanceTo(before), 0);
+    expect(visit.camera, isCameraCloseTo(before, tolerance: 0));
     // The flight ends where it was going, so the camera does not jump.
     expect(state.arrival.framing, same(arrival));
   });
@@ -223,29 +198,9 @@ void main() {
       BodyLocation(:final category) => fakeBodies.of(category.slug),
     };
     for (final (name, setup) in starts) {
-      final (container, navigation, clock) = startedWith(setup);
-      if (container.read(navigationProvider) case InFlight(:final flight)) {
-        clock.advanceTo(flight.endTime);
-        navigation.endFinishedFlight();
-      }
-      final state = container.read(navigationProvider) as AtRest;
+      final visit = _Visit(setup)..finishFlight();
+      final state = visit.state as AtRest;
       expect(state.framing.body, same(bodyOf(state.location)), reason: name);
-    }
-  });
-
-  test('a jump to the overview keeps the yaw and pitch of the camera', () {
-    for (final (name, setup) in starts) {
-      final (container, navigation, clock) = startedWith(setup);
-      final before = container.read(navigationProvider).cameraAt(clock.now);
-      navigation.jumpTo(const OverviewLocation());
-      final after = container.read(navigationProvider).cameraAt(clock.now);
-      expect(after.fromTarget.azimuth, before.fromTarget.azimuth, reason: name);
-      expect(
-        after.fromTarget.elevation,
-        before.fromTarget.elevation,
-        reason: name,
-      );
-      expect(after.fromTarget.distance, overviewDistance, reason: name);
     }
   });
 
@@ -253,11 +208,8 @@ void main() {
     for (final category in fakeContent) {
       final body = fakeBodies.of(category.slug);
       double distanceAt(MapLocation location) {
-        final (container, _, _) = startedWith(
-          (navigation, _) => navigation.jumpTo(location),
-        );
-        final camera = container.read(navigationProvider).cameraAt(0);
-        return camera.position.distanceTo(body.positionAt(0));
+        final visit = _Visit((navigation, _) => navigation.jumpTo(location));
+        return visit.camera.position.distanceTo(body.positionAt(0));
       }
 
       expect(
@@ -267,27 +219,46 @@ void main() {
       );
     }
   });
+
+  test('a jump to the overview keeps the azimuth and elevation of the '
+      'camera', () {
+    for (final (name, setup) in starts) {
+      final visit = _Visit(setup);
+      final before = visit.camera.fromTarget;
+      visit.navigation.jumpTo(const OverviewLocation());
+      final after = visit.camera.fromTarget;
+      expect(after.azimuth, before.azimuth, reason: name);
+      expect(after.elevation, before.elevation, reason: name);
+      expect(after.distance, overviewDistance, reason: name);
+    }
+  });
 }
 
-extension _Name on MapLocation {
-  String get name => switch (this) {
-    OverviewLocation() => 'the overview',
-    CategoryLocation(:final category) => category.slug,
-    MessageLocation(:final category, :final message) =>
-      '${category.slug}/${message.slug}',
-  };
+/// A visit with the fake content, put into a state by its setup.
+class _Visit {
+  _Visit([_Setup? setup]) {
+    setup?.call(navigation, clock);
+  }
+
+  final container = ProviderContainer.test(overrides: fakeOverrides);
+  late final navigation = container.read(navigationProvider.notifier);
+  late final clock = container.read(sceneClockProvider);
+
+  MapNavigationState get state => container.read(navigationProvider);
+
+  /// The camera at the time of the clock.
+  Camera get camera => state.cameraAt(clock.now);
+
+  /// Moves the clock to the end of the flight in progress, if there is one,
+  /// and ends it.
+  void finishFlight() {
+    if (state case InFlight(:final flight)) {
+      clock.advanceTo(flight.endTime);
+      navigation.endFinishedFlight();
+    }
+  }
 }
 
 extension _AdvanceBy on SceneClock {
   void advanceBy(double seconds) => advanceTo(now + seconds);
-}
-
-extension _DistanceTo on Camera {
-  /// The larger of the distance between the positions of the two cameras
-  /// and the distance between their forward directions.
-  double distanceTo(Camera other) {
-    final positions = position.distanceTo(other.position);
-    final directions = forward.distanceTo(other.forward);
-    return positions > directions ? positions : directions;
-  }
 }

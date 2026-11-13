@@ -1,7 +1,9 @@
 import 'package:homepage_v2/content/content.dart';
 import 'package:homepage_v2/navigation/map_location.dart';
+import 'package:homepage_v2/providers.dart';
 import 'package:homepage_v2/space/body.dart';
 import 'package:homepage_v2/space/orbit.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 /// Content for tests, so they don't change when the site's copy does.
 const fakeContent = [
@@ -41,4 +43,11 @@ final fakeLocations = <MapLocation>[
     CategoryLocation(category),
     for (final message in category.messages) MessageLocation(category, message),
   ],
+];
+
+/// The overrides that put [fakeContent] and [fakeBodies] in place of the
+/// site's own.
+final fakeOverrides = <Override>[
+  contentProvider.overrideWithValue(fakeContent),
+  bodiesProvider.overrideWithValue(fakeBodies),
 ];

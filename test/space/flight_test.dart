@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/space/body.dart';
 import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
 import 'package:homepage_v2/space/flight.dart';
@@ -9,42 +8,20 @@ import 'package:homepage_v2/space/framing.dart';
 import 'package:homepage_v2/space/site_space.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-/// The time between two samples of a flight, in seconds.
-const _step = 0.001;
+import '../camera_matchers.dart';
+import 'samples.dart';
+
+/// A camera that a flight can start from, at [time].
+typedef _Start = ({String name, Camera camera, double time});
+
+/// A flight to [destination] from [from], which starts at [at].
+Flight _flightTo(Framing destination, {required Camera from, double at = 0}) =>
+    Flight(from: from, startTime: at, destinationAt: destination.cameraAt);
 
 void main() {
-  Flight toBody(
-    String slug,
-    Camera from,
-    double startTime, [
-    Framing Function(Body) framingOf = Framing.ofCategory,
-  ]) => Flight(
-    from: from,
-    startTime: startTime,
-    destinationAt: framingOf(bodies[slug]!).cameraAt,
-  );
-
-  /// The framings of a body: for its category, and for an open message.
-  const framings = {
-    'framed': Framing.ofCategory,
-    'with a message': Framing.ofMessage,
-  };
-
-  Flight toOverview(Camera from, double startTime) => Flight(
-    from: from,
-    startTime: startTime,
-    destinationAt: Framing.overviewWithAnglesOf(from).cameraAt,
-  );
-
-  /// The start cameras for the flights, each with the time when it applies:
-  ///
-  /// - The overview at different angles and zooms, because a visitor can
-  ///   drag and zoom it.
-  /// - Each body in each of its framings, and turned and zoomed to the
-  ///   limits of its framing.
-  /// - Points during flights, because a visitor can select a different body
-  ///   before the camera arrives.
-  final starts = <(String, Camera, double)>[
+  /// The overview at different angles and zooms, because a visitor can drag
+  /// and zoom it.
+  final overviewStarts = <_Start>[
     for (final yaw in [0.0, math.pi / 2, math.pi, -math.pi / 2])
       for (final pitch in [-1.2, 0.0, 1.2])
         for (final distance in [
@@ -53,112 +30,147 @@ void main() {
           overviewLimits.farthest,
         ])
           (
-            'the overview at yaw $yaw, pitch $pitch, distance $distance',
-            Framing(
+            name: 'the overview at yaw $yaw, pitch $pitch, distance $distance',
+            camera: Framing(
               body: centralBody,
               yaw: yaw,
               pitch: pitch,
               distance: distance,
               limits: overviewLimits,
             ).cameraAt(0),
-            0.0,
+            time: 0,
           ),
-    for (final slug in bodies.keys)
+  ];
+
+  /// Each body, turned and zoomed to the limits of its framing.
+  final draggedStarts = <_Start>[
+    for (final MapEntry(key: slug, value: body) in bodies.entries)
       for (final yaw in [-double.infinity, double.infinity])
         for (final pitch in [-double.infinity, double.infinity])
           for (final factor in [0.0, double.infinity])
             (
-              '$slug turned by $yaw and $pitch, and zoomed by $factor',
-              Framing.ofCategory(bodies[slug]!)
+              name: '$slug turned by $yaw and $pitch, and zoomed by $factor',
+              camera: Framing.ofCategory(body)
                   .turned(byYaw: yaw, byPitch: pitch)
                   .zoomed(factor)
                   .cameraAt(0),
-              0.0,
+              time: 0,
             ),
-    for (final slug in bodies.keys)
-      for (final MapEntry(key: framed, value: framingOf) in framings.entries)
-        for (final time in [0.0, 40.0])
-          (
-            '$slug $framed at ${time}s',
-            framingOf(bodies[slug]!).cameraAt(time),
-            time,
-          ),
+  ];
+
+  /// Each body in each of its framings, at two points along its orbit.
+  final framedStarts = <_Start>[
+    for (final (:name, body: _, :framing) in bodyFramings)
+      for (final time in [0.0, 40.0])
+        (name: '$name at ${time}s', camera: framing.cameraAt(time), time: time),
+  ];
+
+  /// Points during flights, because a visitor can select a different body
+  /// before the camera arrives.
+  final midFlightStarts = <_Start>[
     for (final (name, flight) in [
       for (final from in bodies.keys)
         for (final to in bodies.keys)
           if (from != to)
             (
               'from $from to $to',
-              toBody(to, Framing.ofCategory(bodies[from]!).cameraAt(0), 0),
+              _flightTo(
+                Framing.ofCategory(bodies[to]!),
+                from: Framing.ofCategory(bodies[from]!).cameraAt(0),
+              ),
             ),
-      for (final slug in bodies.keys) ...[
+      for (final MapEntry(key: slug, value: body) in bodies.entries) ...[
         (
           'from the overview to $slug',
-          toBody(slug, const Framing.overview().cameraAt(0), 0),
+          _flightTo(
+            Framing.ofCategory(body),
+            from: const Framing.overview().cameraAt(0),
+          ),
         ),
-        (
-          'from $slug to the overview',
-          toOverview(Framing.ofCategory(bodies[slug]!).cameraAt(0), 0),
-        ),
+        () {
+          final from = Framing.ofCategory(body).cameraAt(0);
+          return (
+            'from $slug to the overview',
+            _flightTo(Framing.overviewWithAnglesOf(from), from: from),
+          );
+        }(),
       ],
     ])
       for (final fraction in [0.1, 0.3, 0.5, 0.7])
         (
-          '$fraction of the way $name',
-          flight.cameraAt(flight.duration * fraction),
-          flight.duration * fraction,
+          name: '$fraction of the way $name',
+          camera: flight.cameraAt(flight.duration * fraction),
+          time: flight.duration * fraction,
         ),
   ];
 
   /// All flights from all starts, to each framing of each body and to the
-  /// overview. Each flight has the cameras of its destination at its start
-  /// time and at its end time. For a flight to the overview, this value is
-  /// null, because the destination does not move.
+  /// overview, with the destination's camera at the start and at the end.
   final flights = [
-    for (final (startName, from, time) in starts) ...[
-      for (final MapEntry(key: slug, value: body) in bodies.entries)
-        for (final MapEntry(key: framed, value: framingOf) in framings.entries)
-          () {
-            final flight = toBody(slug, from, time, framingOf);
-            return (
-              'from $startName to $slug $framed',
-              flight,
-              (
-                framingOf(body).cameraAt(flight.startTime),
-                framingOf(body).cameraAt(flight.endTime),
-              ),
-            );
-          }(),
-      ('from $startName to the overview', toOverview(from, time), null),
+    for (final start in [
+      ...overviewStarts,
+      ...draggedStarts,
+      ...framedStarts,
+      ...midFlightStarts,
+    ]) ...[
+      for (final (:name, body: _, :framing) in bodyFramings)
+        () {
+          final flight = _flightTo(framing, from: start.camera, at: start.time);
+          return (
+            name: 'from ${start.name} to $name',
+            flight: flight,
+            destinationAtStart: framing.cameraAt(flight.startTime),
+            destinationAtEnd: framing.cameraAt(flight.endTime),
+          );
+        }(),
+      () {
+        final overview = Framing.overviewWithAnglesOf(start.camera);
+        return (
+          name: 'from ${start.name} to the overview',
+          flight: _flightTo(overview, from: start.camera, at: start.time),
+          destinationAtStart: overview.cameraAt(0),
+          destinationAtEnd: overview.cameraAt(0),
+        );
+      }(),
     ],
+  ];
+
+  /// A flight from the overview to each framing of each body, with times
+  /// from its end on, also when the body has moved along its orbit.
+  final arrivals = [
+    for (final (:name, :body, :framing) in bodyFramings)
+      () {
+        final flight = _flightTo(
+          framing,
+          from: const Framing.overview().cameraAt(0),
+        );
+        return (
+          name: name,
+          body: body,
+          framing: framing,
+          flight: flight,
+          times: [flight.endTime, flight.endTime + 10, flight.endTime + 37],
+        );
+      }(),
   ];
 
   test('the overview is the farthest view', () {
     final overview = const Framing.overview().cameraAt(0).position.length;
-    for (final MapEntry(key: slug, value: body) in bodies.entries) {
-      for (final MapEntry(key: framed, value: framingOf) in framings.entries) {
-        final flight = toBody(
-          slug,
-          const Framing.overview().cameraAt(0),
-          0,
-          framingOf,
+    for (final (:name, :body, :flight, framing: _, times: _) in arrivals) {
+      for (final time in timesAlongOrbitOf(body, count: 100)) {
+        expect(
+          flight.cameraAt(flight.endTime + time).position.length,
+          lessThan(overview),
+          reason: '$name at ${flight.endTime + time}s',
         );
-        final period = 2 * math.pi / body.orbit.angularSpeed;
-        for (var i = 0; i < 100; i++) {
-          final time = flight.endTime + period * i / 100;
-          expect(
-            flight.cameraAt(time).position.length,
-            lessThan(overview),
-            reason: '$slug $framed at ${time}s',
-          );
-        }
       }
     }
   });
 
   test('a flight keeps the camera outside the radius of the central body', () {
-    for (final (name, flight, _) in flights) {
-      for (var time = flight.startTime; time <= flight.endTime; time += _step) {
+    for (final (:name, :flight, destinationAtStart: _, destinationAtEnd: _)
+        in flights) {
+      for (final time in flight.sampleTimes) {
         expect(
           flight.cameraAt(time).position.length,
           greaterThan(centralBody.radius),
@@ -169,39 +181,36 @@ void main() {
   });
 
   test('a flight starts at the camera position and stops without a jump', () {
-    // Use times very near each end. At the ends, cameraAt gives the start camera
-    // and the destination camera directly, and the test does not examine the eased
-    // path.
-    for (final (name, flight, _) in flights) {
-      final start = flight.from.position;
+    // Use times very near each end. At the ends, cameraAt gives the start
+    // camera and the destination camera directly.
+    for (final (:name, :flight, destinationAtStart: _, destinationAtEnd: _)
+        in flights) {
       expect(
-        flight.cameraAt(flight.startTime + 1e-9).position.distanceTo(start),
-        lessThan(1e-6),
+        flight.cameraAt(flight.startTime + 1e-9),
+        isCameraCloseTo(flight.from, tolerance: 1e-6),
         reason: '$name: start',
       );
-      final end = flight.cameraAt(flight.endTime).position;
       expect(
-        flight.cameraAt(flight.endTime - 1e-9).position.distanceTo(end),
-        lessThan(1e-6),
+        flight.cameraAt(flight.endTime - 1e-9),
+        isCameraCloseTo(flight.cameraAt(flight.endTime), tolerance: 1e-6),
         reason: '$name: end',
       );
     }
   });
 
   test('a flight turns the camera the shorter way', () {
-    for (final (name, flight, destination) in flights) {
-      // The azimuth of the camera turns a half turn or less to the destination at
-      // the start time. It also turns as much as the destination turns,
-      // because the body moves along its orbit.
-      final destinationTurn = destination == null
-          ? 0.0
-          : wrapAngle(
-              destination.$2.fromTarget.azimuth -
-                  destination.$1.fromTarget.azimuth,
-            );
+    for (final (:name, :flight, :destinationAtStart, :destinationAtEnd)
+        in flights) {
+      // The azimuth of the camera turns a half turn or less to the
+      // destination at the start time. It also turns as much as the
+      // destination turns, because the body moves along its orbit.
+      final destinationTurn = wrapAngle(
+        destinationAtEnd.fromTarget.azimuth -
+            destinationAtStart.fromTarget.azimuth,
+      );
       var turn = 0.0;
       var azimuth = flight.from.fromTarget.azimuth;
-      for (var time = flight.startTime; time <= flight.endTime; time += _step) {
+      for (final time in flight.sampleTimes) {
         final next = flight.cameraAt(time).fromTarget.azimuth;
         turn += wrapAngle(next - azimuth);
         azimuth = next;
@@ -215,88 +224,74 @@ void main() {
   });
 
   test('after a flight to a body, the camera has the angles of the framing '
-      'and shows the central body, also when the body moves', () {
-    for (final MapEntry(key: slug, value: body) in bodies.entries) {
-      for (final MapEntry(key: framed, value: framingOf) in framings.entries) {
-        final framing = framingOf(body);
-        final flight = toBody(
-          slug,
-          const Framing.overview().cameraAt(0),
-          0,
-          framingOf,
+      'and looks at the body', () {
+    for (final (:name, :body, :framing, :flight, :times) in arrivals) {
+      for (final time in times) {
+        final camera = flight.cameraAt(time);
+        final bodyPosition = body.positionAt(time);
+        final reason = '$name at ${time}s';
+
+        expect(
+          camera.forward.distanceTo(
+            (bodyPosition - camera.position).normalized(),
+          ),
+          lessThan(1e-9),
+          reason: '$reason: looks at the body',
         );
-        for (final time in [
-          flight.endTime,
-          flight.endTime + 10,
-          flight.endTime + 37,
+
+        // From the body, the camera must be at the angles of the framing
+        // from straight behind the body.
+        final behind = DirectionAndDistance.of(bodyPosition);
+        final seen = DirectionAndDistance.of(camera.position - bodyPosition);
+        expect(
+          wrapAngle(seen.azimuth - behind.azimuth),
+          closeTo(framing.yaw, 1e-9),
+          reason: '$reason: yaw',
+        );
+        expect(
+          seen.elevation - behind.elevation,
+          closeTo(framing.pitch, 1e-9),
+          reason: '$reason: pitch',
+        );
+        expect(
+          seen.distance,
+          closeTo(framing.distance, 1e-9),
+          reason: '$reason: distance',
+        );
+      }
+    }
+  });
+
+  test('after a flight to a body, the body does not hide the central '
+      'body', () {
+    for (final (:name, :body, :framing, :flight, :times) in arrivals) {
+      for (final time in times) {
+        final camera = flight.cameraAt(time);
+        final towardBody = body.positionAt(time) - camera.position;
+        final towardCentralBody = -camera.position;
+        // The disc's angular radius, seen from the camera, is
+        // asin(radius / distance).
+        expect(
+          towardBody.angleTo(towardCentralBody),
+          greaterThan(math.asin(body.radius / framing.distance)),
+          reason: '$name at ${time}s',
+        );
+      }
+    }
+  });
+
+  test('after a flight to a body, the central body is on screen', () {
+    for (final (:name, :flight, :times, body: _, framing: _) in arrivals) {
+      for (final time in times) {
+        for (final screen in const [
+          Screen(width: 400, height: 250),
+          Screen(width: 250, height: 400),
         ]) {
-          final camera = flight.cameraAt(time);
-          final bodyPosition = body.positionAt(time);
-          final reason = '$slug $framed at ${time}s';
-
-          final towardBody = (bodyPosition - camera.position).normalized();
           expect(
-            camera.forward.distanceTo(towardBody),
-            lessThan(1e-9),
-            reason: '$reason: looks at the body',
+            flight.cameraAt(time).project(Vector3.zero(), screen),
+            isOnScreen(screen),
+            reason: '$name at ${time}s',
           );
-
-          // The position directly behind the body is on the line from the
-          // central body through the body. From the body, the camera must be
-          // at the offsets of the framing from that line.
-          final behind = DirectionAndDistance.of(bodyPosition);
-          final seen = DirectionAndDistance.of(camera.position - bodyPosition);
-          expect(
-            wrapAngle(seen.azimuth - behind.azimuth),
-            closeTo(framing.yaw, 1e-9),
-            reason: '$reason: yaw',
-          );
-          expect(
-            seen.elevation - behind.elevation,
-            closeTo(framing.pitch, 1e-9),
-            reason: '$reason: pitch',
-          );
-          expect(
-            seen.distance,
-            closeTo(framing.distance, 1e-9),
-            reason: '$reason: distance',
-          );
-
-          // The central body shows next to the body: its centre is outside
-          // the disc of the body. The disc's angular radius, seen from the
-          // camera, is asin(radius / distance).
-          final towardCentralBody = -camera.position.normalized();
-          final angleToCentralBody = math.acos(
-            towardBody.dot(towardCentralBody).clamp(-1.0, 1.0),
-          );
-          expect(
-            angleToCentralBody,
-            greaterThan(math.asin(body.radius / framing.distance)),
-            reason: '$reason: the body does not hide the central body',
-          );
-
-          for (final screen in const [
-            Screen(width: 400, height: 250),
-            Screen(width: 250, height: 400),
-          ]) {
-            final centralBodyOnScreen = camera.project(Vector3.zero(), screen);
-            final size = '${screen.width}x${screen.height}';
-            expect(
-              centralBodyOnScreen,
-              isNotNull,
-              reason: '$reason, $size: in front',
-            );
-            expect(
-              centralBodyOnScreen!.x,
-              inInclusiveRange(0, screen.width),
-              reason: '$reason, $size: on screen',
-            );
-            expect(
-              centralBodyOnScreen.y,
-              inInclusiveRange(0, screen.height),
-              reason: '$reason, $size: on screen',
-            );
-          }
         }
       }
     }
