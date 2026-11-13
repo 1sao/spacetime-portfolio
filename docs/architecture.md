@@ -8,8 +8,8 @@ category (projects, experience, contact) and holds one beacon per message.
 Messages first show in an alien glyph script and scramble into readable text
 when opened.
 
-- **Overview:** the farthest view. The camera orbits the hole slowly; drag to
-  orbit, scroll to zoom.
+- **Overview:** the farthest view. Drag to orbit, scroll to zoom. A slow
+  orbit of the hole while the visitor is idle is planned.
 - **Focus:** selecting a body flies the camera round the hole to it, turned to
   look past the body at the hole. The sidebar lists the body's messages,
   still in glyphs.
@@ -68,46 +68,75 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
 
 ## Camera
 
-- The overview sits 30 units out, beyond every focused framing. Zoom
-  keeps it 24 to 60 units out, and the farthest focused camera is 21.5
-  units out: the outer orbit is 13.5 units, plus 8 of zoom.
-- **Focusing is one eased move** in spherical coordinates (azimuth,
-  elevation, distance). The camera goes round the hole, never through it.
-  - It turns to face the hole 0.3 rad of yaw and 0.25 rad of pitch off
-    straight behind the body, so the hole shows beside it.
-  - The move takes 1.2 s for a small swing and up to 2.4 s for a half turn.
-- While focused, the camera turns with the body's orbit, so the hole stays
-  almost in place on the screen. Idle auto-rotate runs only in the overview.
-- **Azimuth and elevation are world angles; yaw and pitch are turns from
-  straight behind a body.**
-- **The camera looks at a target.** It is a target point, and a
-  direction (azimuth and elevation) and distance from that point. Flights,
-  drag and zoom move it. The elevation stays a little less than
-  straight up or down.
-  When the camera looks straight up or down, it has no horizontal right
-  direction. Past that angle, the view turns upside down.
-- **A flight is a function of time.** It keeps its start, its destination
-  and its start time, and it calculates the camera for each time. Because of
-  this, the navigation state changes only when a flight starts or stops.
-- **A framing holds the camera at rest.** It is a body, and a yaw, a
-  pitch and a distance from that body. The angles are measured from
-  straight behind the body: the direction from the central body through
-  the body. The overview is a framing of the central body. The central
-  body does not move and has no direction from itself, so there the angles
-  are the camera's own yaw and pitch. Drag and zoom change every framing in
-  the same way.
-- **Drag and zoom have limits,** as data on each framing.
-  - At a body, a drag turns the camera at most a quarter turn of yaw and
-    0.85 rad of pitch from straight behind the body. The yaw limit keeps
-    the camera almost as far from the central body as the body is, or
-    farther. The pitch limit plus the steepest orbit tilt is less than the
-    camera's clamp. So a drag does not store a turn that the camera does not
-    show. The zoom
-    stays 1.5 to 8 units from the body, so the camera stays outside the
-    framed body. Other bodies can pass through the camera.
-  - At the overview, any yaw, and the pitch of the camera's clamp. The zoom
-    stays 24 to 60 units out.
-  - During a flight, the visitor can't move the camera.
+What the visitor sees:
+
+- The overview is the farthest view.
+- A focus is one eased move round the central body, never through it. It
+  ends turned to look past the body at the central body, so the central
+  body shows beside it. A larger swing takes longer, so the sky never
+  moves fast.
+- While focused, the camera turns with the body's orbit, so the central
+  body stays almost in place on the screen.
+- A drag turns the camera and a zoom moves it nearer or farther, within
+  limits. During a flight, the visitor can't move the camera.
+
+How each frame gets its camera: the frame loop asks the navigation state
+for the camera at the time of the clock, and puts it in the frame
+snapshot.
+
+- At rest, the state's framing gives the camera: the framed body's
+  position at that time, and the framing's angles and distance from it.
+- During a flight, the flight gives the camera: a camera between the one
+  where the flight started and the one of the destination's framing at
+  that time.
+
+The concepts, each built on the ones before it:
+
+- **Angles.** Azimuth and elevation are world angles: a direction around
+  world y and above the xz plane (`DirectionAndDistance`). Yaw and pitch
+  are turns from straight behind a body. Straight behind a body is the
+  direction from the central body through the body.
+- **Camera.** The camera looks at a point, its target. The camera's
+  position is given as a direction and a distance from the target. The
+  elevation of that direction stays a little less than straight up or
+  down. Straight up or down, the camera has no horizontal right direction.
+  Past that angle, the view turns upside down. From the direction and the
+  distance, the camera calculates its position as a point and its forward,
+  right and up directions, which the shader and the projection read.
+- **Framing.** Where the camera rests: a body, and a yaw, a pitch and a
+  distance from that body. The angles are measured from straight behind
+  the body, so the camera turns with the orbit. The overview is a framing
+  of the central body. The central body has no direction from itself, so
+  there the angles are the camera's own azimuth and elevation. Drag and
+  zoom change every framing in the same way.
+- **Flight.** A function of time: it keeps its start camera, its start
+  time and its destination, which can move. The target's direction and
+  distance from the central body ease, so the target goes round the central
+  body. The camera's direction and distance from the target ease too. The
+  flight ends exactly on the destination, so the camera does not jump when
+  the flight ends. The navigation state holds the flight, not how far along
+  it is (see "Navigation").
+- **Limits.** Each framing holds its limits for drag and zoom. At a body:
+  - The yaw limit keeps the camera almost as far from the central body as
+    the body is, or farther.
+  - The pitch limit plus the steepest orbit tilt is less than the camera's
+    elevation limit. So a drag never stores a turn that the camera does not
+    show.
+  - The nearest distance is more than the radius of every body, so the
+    camera stays outside the framed body. Other bodies can pass through the
+    camera.
+
+  At the overview, any yaw.
+
+The settings are constants:
+
+- `lib/space/site_space.dart`: the central body, the orbits and bodies, and
+  the overview's distance.
+- `lib/space/framing.dart`: the angles and distances of each framing, and
+  the limits.
+- `lib/space/camera.dart`: the elevation limit and the field of view.
+- `lib/space/flight.dart`: the shortest flight.
+- `lib/space/orbit.dart`: the pace of the orbits.
 
 ## Layers
 
@@ -184,28 +213,8 @@ enforces the boundary.
   different classes from the SDK's, and the SDK is migrating to it.
 - **State:** Riverpod 3, without code generation. The site is small enough
   for `ChangeNotifier`; Riverpod was chosen to learn it.
-  - Navigation is a `Notifier` over a sealed state class. It changes only at
-    transitions: it holds where a flight goes and when it started, not how
-    far along it is. A drag or a zoom changes the framing of the state at
-    rest in place, without a new state, so that listeners hear only
-    transitions.
-    - A location is the overview, a category, or a message of a category.
-      Each map URL is one location, and Esc goes to a location's parent.
-    - The state is one of two kinds: at rest, or in flight. Each kind
-      gives its location and the camera for a time. During a flight,
-      the location is the destination.
-    - A flight to a category is a focus, and a flight to a message is a
-      warp. The type of the location shows which it is.
-    - A state at rest holds a framing, and the camera follows the framed
-      body. At the overview, the framed body is the central body. A
-      message starts with a framing nearer to its body than its category
-      has. Zoom can change both framings.
-    - The frame loop reads the camera from the state for each frame, and
-      it tells the navigation when the clock passes the end of a flight.
-    - The URL drives the state. A listener on the router's delegate puts
-      the camera at the first URL of a visit, and flies it to each later
-      one. Nothing writes the URL from the state. The list view leaves the
-      state as it is.
+  - Navigation is a `Notifier` over a sealed state class (see
+    "Navigation").
   - Content, the router and settings (each category's body, body looks,
     quality tier) are providers, so tests override them.
   - `space/` and `content/` import neither Flutter nor Riverpod.
@@ -235,17 +244,42 @@ enforces the boundary.
     and one parser turns a URL into a location.
   - Links are shareable.
   - Route changes move the camera; pages don't transition.
-- **Animation:** a single `Ticker` drives the per-frame snapshot. Flights are
-  plain eased interpolations in `space/`, not `AnimationController`s spread
-  across widgets. The ticker runs only while the app is resumed, so the
-  scene stands still while the window is unfocused or hidden, and its time
-  goes on from where it stopped. One provider, `isSceneRunningProvider`,
-  says if the scene runs. Camera input does nothing while it stands still.
-- **Time:** one clock for the scene. The ticker moves it forward, and
-  navigation reads it for the start time of a flight. It is a plain object
-  behind a provider, not Riverpod state. It stands still while the ticker
-  does not run, which includes the time when the list view is open, so
-  flights and orbits continue from where they stopped.
+- **Animation and time:** a single `Ticker` drives the per-frame snapshot
+  and moves the scene's one clock forward. Navigation reads that clock for
+  the start time of a flight. Flights are plain eased interpolations in
+  `space/`, not `AnimationController`s spread across widgets. The clock is
+  a plain object behind a provider, not Riverpod state.
+  - The ticker runs only while the app is resumed and the map page is
+    open. The scene stands still while the window is unfocused or hidden,
+    or while the list view is open. Flights and orbits then go on from
+    where they stopped.
+  - One provider, `isSceneRunningProvider`, says if the app lets the scene
+    run. Camera input does nothing while it does not.
+
+## Navigation
+
+- Navigation is a `Notifier` over a sealed state class. It changes only at
+  transitions: it holds where a flight goes and when it started, not how
+  far along it is. A drag or a zoom changes the framing of the state at
+  rest in place, without a new state, so that listeners hear only
+  transitions.
+- A location is the overview, a category, or a message of a category.
+  Each map URL is one location, and Esc goes to a location's parent.
+- The state is one of two kinds: at rest, or in flight. Each kind gives
+  its location and the camera for a time. During a flight, the location is
+  the destination.
+- A flight to a category is a focus, and a flight to a message is a warp.
+  The type of the location shows which it is.
+- A state at rest holds a framing, and the camera follows the framed body.
+  At the overview, the framed body is the central body. A message starts
+  with a framing nearer to its body than its category has. Zoom can change
+  both framings.
+- The frame loop reads the camera from the state for each frame, and it
+  tells the navigation when the clock passes the end of a flight.
+- The URL drives the state. A listener on the router's delegate puts the
+  camera at the first URL of a visit, and flies it to each later one.
+  Nothing writes the URL from the state. The list view leaves the state as
+  it is.
 
 ## Web: search engines and link previews
 
@@ -301,7 +335,7 @@ if the site grows long-form pages.
 ## Accessibility, motion and quality
 
 - **Reduced motion** (`MediaQuery.disableAnimations`): no sky rush on warp,
-  short cuts instead of flights, no auto-rotate.
+  short cuts instead of flights, and no idle auto-rotate when it comes.
 - **The list view is a first-class route,** not a debug fallback. Every
   message is reachable without the scene.
 - **Semantics:** the sidebar, cards and list carry real labels. The scene is

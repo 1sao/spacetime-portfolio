@@ -2,8 +2,8 @@
 
 A portfolio presented as an interactive space map, in Flutter web.
 
-Read `docs/architecture.md` before changing code. Its "Rules" and
-"Libraries and state" sections are binding.
+Read `docs/architecture.md` before changing code. Its "Rules",
+"Libraries and state" and "Navigation" sections are binding.
 
 ## Conventions
 

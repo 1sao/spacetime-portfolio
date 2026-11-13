@@ -76,15 +76,10 @@ float distanceToSphere(vec3 direction, vec4 sphere) {
 }
 
 void main() {
-  // The slope of the ray through this pixel: for each unit it travels
-  // forward, it goes slope.x to the right and slope.y down, or the other
-  // way where they're negative. Down, because pixel y counts down from the
-  // top. FlutterFragCoord is the pixel's centre, in pixels from the top
-  // left, so its distance from the middle over uFocal is the slope.
+  // The slope of the ray through this pixel (see uFocal).
   vec2 slope = (FlutterFragCoord().xy - uSize * 0.5) / uFocal;
-  // One unit forward, slope.x right and slope.y down. uUp points up, so
-  // going down subtracts it. normalize then scales the direction to length
-  // 1, which distanceToSphere needs.
+  // Pixel y counts down, so the direction subtracts uUp. normalize scales
+  // the direction to length 1, which distanceToSphere needs.
   vec3 direction = normalize(uForward + slope.x * uRight - slope.y * uUp);
 
   // Each sphere the ray enters sooner than the nearest so far takes over

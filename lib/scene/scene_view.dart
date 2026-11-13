@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../space/camera.dart';
-import '../space/frame.dart';
+import '../space/frame_snapshot.dart';
 import 'frame_loop.dart';
 import 'looks.dart';
 import 'scene_shader.dart';

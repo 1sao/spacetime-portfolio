@@ -2,9 +2,8 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-/// The pace of every orbit, set by one reference: an orbit of this radius,
-/// in world units, goes round once in [_referencePeriodSeconds], and
-/// Kepler's third law scales every other orbit's period from it.
+/// An orbit of this radius, in world units, goes round once in
+/// [_referencePeriodSeconds].
 const _referenceRadius = 6.5;
 
 const _referencePeriodSeconds = 120.0;

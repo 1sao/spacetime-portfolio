@@ -6,7 +6,7 @@ import 'package:homepage_v2/navigation/map_location.dart';
 import 'package:homepage_v2/navigation/map_navigation_state.dart';
 import 'package:homepage_v2/navigation/navigation.dart';
 import 'package:homepage_v2/scene/frame_loop.dart';
-import 'package:homepage_v2/space/frame.dart';
+import 'package:homepage_v2/space/frame_snapshot.dart';
 import 'package:homepage_v2/space/framing.dart';
 
 import '../camera_matchers.dart';

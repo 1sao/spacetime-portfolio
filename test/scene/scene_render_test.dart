@@ -7,7 +7,7 @@ import 'package:homepage_v2/scene/scene_shader.dart';
 import 'package:homepage_v2/scene/scene_view.dart';
 import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
-import 'package:homepage_v2/space/frame.dart';
+import 'package:homepage_v2/space/frame_snapshot.dart';
 import 'package:homepage_v2/space/site_space.dart';
 import 'package:vector_math/vector_math_64.dart' show Sphere, Vector2, Vector3;
 

@@ -2,6 +2,7 @@ import 'package:riverpod/riverpod.dart';
 
 import '../providers.dart';
 import '../space/body.dart';
+import '../space/camera.dart';
 import '../space/flight.dart';
 import '../space/scene_clock.dart';
 import 'map_location.dart';
@@ -13,8 +14,6 @@ final navigationProvider = NotifierProvider<Navigation, MapNavigationState>(
 
 /// Moves the visitor between the locations of the map. It is the single
 /// place where flights start and end.
-///
-/// The state changes only when a flight starts or ends, and at a jump.
 class Navigation extends Notifier<MapNavigationState> {
   late SceneClock _clock;
 
@@ -32,7 +31,7 @@ class Navigation extends Notifier<MapNavigationState> {
 
     final now = _clock.now;
     final from = state.cameraAt(now);
-    final arrival = _restAt(location);
+    final arrival = _restAt(location, from: from);
     state = InFlight(
       flight: Flight(
         from: from,
@@ -43,14 +42,12 @@ class Navigation extends Notifier<MapNavigationState> {
     );
   }
 
-  /// Puts the camera at [location] immediately, without a flight. At the
-  /// overview, the camera keeps its yaw and pitch, as at the end of a flight.
+  /// Puts the camera at [location] immediately, without a flight.
   void jumpTo(MapLocation location) {
-    state = _restAt(location);
+    state = _restAt(location, from: state.cameraAt(_clock.now));
   }
 
-  /// Turns the camera around the framed body by [yaw] and [pitch], in rad.
-  /// During a flight, the visitor can't turn the camera, so this does
+  /// Turns the camera at rest (see [AtRest.turn]). During a flight, it does
   /// nothing.
   void turn({required double yaw, required double pitch}) {
     final current = state;
@@ -58,9 +55,8 @@ class Navigation extends Notifier<MapNavigationState> {
     current.turn(yaw: yaw, pitch: pitch);
   }
 
-  /// Multiplies the distance from the camera to the framed body by
-  /// [factor]. A [factor] less than 1 moves the camera nearer. During a
-  /// flight, the visitor can't move the camera, so this does nothing.
+  /// Zooms the camera at rest (see [AtRest.zoom]). During a flight, it does
+  /// nothing.
   void zoom(double factor) {
     final current = state;
     if (current is! AtRest) return;
@@ -77,13 +73,13 @@ class Navigation extends Notifier<MapNavigationState> {
     }
   }
 
-  /// The state at rest at [location]. At the overview, the camera keeps the
-  /// yaw and pitch that it has now, so it does not turn.
-  AtRest _restAt(MapLocation location) => switch (location) {
-    OverviewLocation() => AtRest.atOverview(state.cameraAt(_clock.now)),
-    BodyLocation() => AtRest.atBody(
-      location,
-      ref.read(bodiesProvider).of(location.category.slug),
-    ),
-  };
+  /// The state at rest at [location], for a camera that is at [from] now.
+  AtRest _restAt(MapLocation location, {required Camera from}) =>
+      switch (location) {
+        OverviewLocation() => AtRest.atOverview(from),
+        BodyLocation() => AtRest.atBody(
+          location,
+          ref.read(bodiesProvider).of(location.category.slug),
+        ),
+      };
 }

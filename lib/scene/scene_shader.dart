@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:vector_math/vector_math_64.dart';
 
 import '../space/camera.dart';
-import '../space/frame.dart';
+import '../space/frame_snapshot.dart';
 import '../space/site_space.dart';
 import 'looks.dart';
 

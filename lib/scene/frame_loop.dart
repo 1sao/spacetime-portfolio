@@ -5,26 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../navigation/navigation.dart';
 import '../providers.dart';
 import '../space/body.dart';
-import '../space/frame.dart';
+import '../space/frame_snapshot.dart';
 import 'scene_running.dart';
 import 'scene_shader.dart';
 
-/// Provides a listenable holding the current [FrameSnapshot]. While anything
-/// watches this provider, a ticker replaces the snapshot every frame; it
-/// stops when nothing does.
-///
-/// The ticker moves the scene's clock, and each snapshot has the camera of
-/// the navigation state at the clock's time.
-///
-/// The scene's time stands still while [isSceneRunningProvider] is false,
-/// and while nothing watches this provider. It goes on from there, so
-/// nothing jumps.
-///
-/// The provider's own value, the listenable, changes only when the content
-/// or the bodies do, so watching the provider doesn't rebuild every frame.
-/// Code that needs every frame, such as a painter, should listen to the
-/// listenable, rather than copy its snapshots into Riverpod state, which
-/// would rebuild every watcher each frame.
+/// The current [FrameSnapshot], as a listenable. While something watches
+/// this provider and the scene runs, a ticker moves the scene's clock and
+/// replaces the snapshot each frame. The provider's own value changes only
+/// with the content or the bodies, so a painter should listen to the
+/// listenable.
 final frameSnapshotListenableProvider =
     Provider.autoDispose<ValueListenable<FrameSnapshot>>((ref) {
       final content = ref.watch(contentProvider);
@@ -41,27 +30,26 @@ final frameSnapshotListenableProvider =
       }
 
       final clock = ref.watch(sceneClockProvider);
-      final navigationNotifier = ref.read(navigationProvider.notifier);
-      var navigation = ref.read(navigationProvider);
+      final navigation = ref.read(navigationProvider.notifier);
       FrameSnapshot frameAtClockTime() => FrameSnapshot.at(
         clock.now,
-        navigation.cameraAt(clock.now),
+        ref.read(navigationProvider).cameraAt(clock.now),
         bodiesInContentOrder,
       );
 
       final currentFrame = ValueNotifier(frameAtClockTime());
       // The snapshot also changes here, so a transition shows while the
       // ticker is stopped.
-      ref.listen(navigationProvider, (_, next) {
-        navigation = next;
-        currentFrame.value = frameAtClockTime();
-      });
+      ref.listen(
+        navigationProvider,
+        (_, _) => currentFrame.value = frameAtClockTime(),
+      );
       // The clock's time when the ticker last started. A started ticker
       // counts from zero.
       var startedAt = clock.now;
       final ticker = Ticker((elapsed) {
         clock.advanceTo(startedAt + elapsed.inFractionalSeconds);
-        navigationNotifier.endFinishedFlight();
+        navigation.endFinishedFlight();
         currentFrame.value = frameAtClockTime();
       });
       ref.listen(isSceneRunningProvider, fireImmediately: true, (_, isRunning) {

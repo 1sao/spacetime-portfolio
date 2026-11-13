@@ -17,7 +17,7 @@ const _inner = CircularOrbit(radius: 6.5, tilt: 0.35, node: 0);
 const _middle = CircularOrbit(radius: 9.5, tilt: -0.3, node: 1.1);
 const _outer = CircularOrbit(radius: 13.5, tilt: 0.55, node: 2.3);
 
-/// The body each category is drawn as, keyed by category slug.
+/// The body each category is drawn as, by category slug.
 const Map<String, Body> bodies = {
   'projects': Body(orbit: _inner, phase: 0.4, radius: 0.6),
   'experience': Body(orbit: _middle, phase: 2.6, radius: 0.55),

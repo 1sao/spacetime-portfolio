@@ -18,8 +18,10 @@ class Body {
   /// The sphere's radius, in world units.
   final double radius;
 
-  Vector3 positionAt(double seconds) =>
-      orbit.pointAt(phase + orbit.angularSpeed * seconds);
+  /// The centre of the body at [time], in seconds on the clock of the
+  /// scene.
+  Vector3 positionAt(double time) =>
+      orbit.pointAt(phase + orbit.angularSpeed * time);
 }
 
 extension BodyOfSlug on Map<String, Body> {

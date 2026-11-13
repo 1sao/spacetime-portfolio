@@ -5,6 +5,10 @@ import 'camera.dart';
 
 /// A single source of truth for everything that moves, at one moment. The
 /// frame loop builds one per frame.
+///
+/// Caution: the vectors of [camera] and the spheres of [bodies] are mutable, and every
+/// reader of the frame shares them, so they should not be changed in
+/// place.
 class FrameSnapshot {
   FrameSnapshot({
     required this.time,
@@ -30,8 +34,5 @@ class FrameSnapshot {
 
   /// Each category's body, in content order, as a sphere: its centre and
   /// radius, in world units.
-  ///
-  /// Caution: spheres are mutable, and every reader of the frame shares
-  /// these, so they shouldn't be changed in place.
   final List<Sphere> bodies;
 }

@@ -78,6 +78,13 @@ class _CameraControlsState extends ConsumerState<CameraControls> {
     if (_isPressed != isPressed) setState(() => _isPressed = isPressed);
   }
 
+  /// The cursor shows if a drag can turn the camera, and if it turns it now.
+  MouseCursor _cursor({required bool isFlying}) {
+    if (isFlying) return SystemMouseCursors.basic;
+    if (_isPressed) return SystemMouseCursors.grabbing;
+    return SystemMouseCursors.grab;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isFlying = ref.watch(
@@ -96,11 +103,7 @@ class _CameraControlsState extends ConsumerState<CameraControls> {
         children: [
           widget.scene,
           MouseRegion(
-            cursor: switch (true) {
-              _ when isFlying => SystemMouseCursors.basic,
-              _ when _isPressed => SystemMouseCursors.grabbing,
-              _ => SystemMouseCursors.grab,
-            },
+            cursor: _cursor(isFlying: isFlying),
             child: Listener(
               onPointerDown: (event) {
                 if (event.buttons.isPrimaryButton) _setPressed(true);
