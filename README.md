@@ -9,6 +9,13 @@ A portfolio presented as an interactive space map, built with Flutter for the we
 Needs Flutter 3.47 or later.
 
 ```sh
-flutter run -d chrome   # serve the site locally and open it in Chrome
-flutter test            # run the tests
+flutter run -d chrome                  # serve the site locally and open it in Chrome
+flutter test                           # run the tests
+dart run tool/measure_performance.dart # time the frames of a tour of the site in Chrome
 ```
+
+`tool/measure_performance.dart` builds `bench/tour.dart`, a tour of the
+site by URL changes, and runs it in Chrome on this machine's GPU with the
+frame rate unlocked. It prints the frame times of each flight and each
+stop. It looks for Chrome where macOS puts it; `--chrome` gives another
+path.

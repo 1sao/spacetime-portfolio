@@ -22,8 +22,13 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  args: ^2.7.0
   flutter_lints: ^6.0.0
   html: ^0.15.7
+  puppeteer: ^3.28.0
+  shelf: ^1.4.3
+  shelf_static: ^1.2.0
+  web: ^1.1.2
 
 flutter:
   uses-material-design: true

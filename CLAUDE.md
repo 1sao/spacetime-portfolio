@@ -15,6 +15,9 @@ Read `docs/architecture.md` before changing code. Its "Rules",
   extension on that value's type: `url.isListView`, not `_isListView(url)`.
 - Use ASD-STE100 for code comments and docs.
 - Comments describe the code as it is now, never how it got there.
+- Comment only where the code is complex or does something unexpected.
+  Keep the comment short: only what a reader needs at that place. No
+  background, measurements, history or alternatives.
 
 ## Commands
 
@@ -23,4 +26,5 @@ flutter analyze
 dart format --set-exit-if-changed .
 flutter test
 flutter run -d web-server --web-port 8080
+dart run tool/measure_performance.dart   # frame times of a tour in Chrome; macOS, local only
 ```
