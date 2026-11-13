@@ -6,6 +6,12 @@
       "runtimeExecutable": "flutter",
       "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8080"],
       "port": 8080
+    },
+    {
+      "name": "phone",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8081", "--web-hostname", "0.0.0.0", "--release"],
+      "port": 8081
     }
   ]
 }

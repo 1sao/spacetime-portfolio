@@ -77,6 +77,15 @@ class Camera {
   /// with [forward] so the two stay at right angles.
   final Vector3 up;
 
+  /// The direction of the ray from the camera through [pixel] of [screen],
+  /// of length 1. It is the same formula as `main()` in
+  /// `shaders/scene.frag`, so the ray goes where the shader's ray goes.
+  Vector3 rayThrough(Vector2 pixel, Screen screen) {
+    final slopeX = (pixel.x - screen.width / 2) / screen.focal;
+    final slopeY = (pixel.y - screen.height / 2) / screen.focal;
+    return (forward + right * slopeX - up * slopeY).normalized();
+  }
+
   /// Where [point] lands in [screen], in pixels from its top left, or null
   /// if it is behind the camera.
   Vector2? project(Vector3 point, Screen screen) {
