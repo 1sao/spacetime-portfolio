@@ -1,12 +1,14 @@
 #version 460 core
 #include <flutter/runtime_effect.glsl>
+#include "sky.glsl"
 
-// The placeholder scene: the central body and up to four bodies, each a
-// sphere drawn as a flat disc in one colour, on black.
+// The scene: the central body and up to four bodies, each a sphere drawn as
+// a flat disc in one colour, over the sky (sky.glsl).
 //
 // A fragment shader runs once for every pixel and returns that pixel's
 // colour. This one casts a ray from the camera through the pixel, finds the
-// nearest sphere the ray hits, and gives the pixel that sphere's colour.
+// nearest sphere the ray hits, and gives the pixel that sphere's colour, or
+// the sky's colour if the ray hits no sphere.
 //
 // lib/scene/scene_shader.dart sets the uniforms by name. Positions and
 // lengths are in world units, colours are red, green and blue from 0 to 1.
@@ -40,6 +42,9 @@ uniform vec3 uColour0;
 uniform vec3 uColour1;
 uniform vec3 uColour2;
 uniform vec3 uColour3;
+// 1 draws black in place of the sky, for the render test, which finds each
+// body by its colour. 0 draws the sky.
+uniform float uPlaceholders;
 
 // The shader's output: this pixel's colour, which main() sets. Red, green,
 // blue and alpha (opacity), each from 0 to 1.
@@ -96,6 +101,8 @@ void main() {
   entry = distanceToSphere(direction, uBody2);
   if (entry < nearest) { nearest = entry; colour = uColour2; }
   entry = distanceToSphere(direction, uBody3);
-  if (entry < nearest) { colour = uColour3; }
+  if (entry < nearest) { nearest = entry; colour = uColour3; }
+
+  if (nearest == noHit && uPlaceholders < 0.5) colour = sky(direction);
   fragColor = vec4(colour, 1.0);
 }

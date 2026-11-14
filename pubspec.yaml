@@ -34,3 +34,5 @@ flutter:
   uses-material-design: true
   shaders:
     - shaders/scene.frag
+  assets:
+    - LICENSES/

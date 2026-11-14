@@ -35,13 +35,15 @@ class SceneView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentFrame = ref.watch(frameSnapshotListenableProvider);
+    // Browser zoom changes it, so the sky's lattice follows the zoom.
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     return switch (ref.watch(sceneShaderProvider)) {
       // The boundary keeps the widgets on top from repainting with the scene
       // every frame.
       AsyncData(value: final shader) => RepaintBoundary(
         child: CustomPaint(
           size: Size.infinite,
-          painter: _ScenePainter(shader, currentFrame),
+          painter: _ScenePainter(shader, currentFrame, pixelRatio),
         ),
       ),
       AsyncLoading() => const SizedBox.expand(),
@@ -54,16 +56,19 @@ class SceneView extends ConsumerWidget {
 }
 
 class _ScenePainter extends CustomPainter {
-  _ScenePainter(this.shader, this.currentFrame) : super(repaint: currentFrame);
+  _ScenePainter(this.shader, this.currentFrame, this.pixelRatio)
+    : super(repaint: currentFrame);
 
   final SceneShader shader;
   final ValueListenable<FrameSnapshot> currentFrame;
+  final double pixelRatio;
 
   @override
   void paint(Canvas canvas, Size size) {
     shader.set(
       currentFrame.value,
       Screen(width: size.width, height: size.height),
+      pixelRatio,
     );
     canvas.drawRect(
       Offset.zero & size,
@@ -73,5 +78,7 @@ class _ScenePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ScenePainter oldDelegate) =>
-      oldDelegate.shader != shader || oldDelegate.currentFrame != currentFrame;
+      oldDelegate.shader != shader ||
+      oldDelegate.currentFrame != currentFrame ||
+      oldDelegate.pixelRatio != pixelRatio;
 }

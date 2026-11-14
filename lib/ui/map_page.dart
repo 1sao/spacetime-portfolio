@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../debug/fps_counter.dart';
 import '../navigation/map_location.dart';
 import '../scene/scene_view.dart';
 import 'camera_controls.dart';
@@ -30,12 +32,21 @@ class MapPage extends StatelessWidget {
           body: CameraControls(
             scene: const SceneView(),
             overlay: SafeArea(
-              child: Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: () => context.go(ListPage.path),
-                  child: const Text('List'),
-                ),
+              child: Stack(
+                children: [
+                  if (kDebugMode)
+                    const Align(
+                      alignment: Alignment.topLeft,
+                      child: FpsCounter(),
+                    ),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: TextButton(
+                      onPressed: () => context.go(ListPage.path),
+                      child: const Text('List'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

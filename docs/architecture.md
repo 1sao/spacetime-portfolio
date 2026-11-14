@@ -57,11 +57,11 @@ per frame at 2560x1600 on an Apple M3 Pro; 8.3 ms is one frame at 120 Hz.
   Options that aren't in use cost nothing measurable. Weaker GPUs need
   quality tiers (see "Accessibility, motion and quality").
 - **Sky:** a Star Nest volume, 20 steps x 17 iterations. Sampled live, 34 %
-  of bright stars blink as the view turns. Two fixes, not yet chosen
-  between; the quality tier will select the variant:
-  - **Direction lattice:** each pixel snaps to a fixed cell. Same cost as
-    live, 5 % blink, but no nebula parallax, and the cell count must follow
-    pixel density.
+  of bright stars blink as the view turns. Two fixes; the quality tiers
+  may select between them:
+  - **Direction lattice,** in use (`shaders/sky.glsl`): each pixel snaps
+    to a fixed cell. Same cost as live, 5 % blink, but no nebula parallax,
+    and the cell count follows pixel density.
   - **Baked cube atlas:** 1.2 ms to draw, but a bake takes 110-210 ms on
     every warp, and lensed arcs break into dashes, because lensing
     magnifies the baked texture's individual pixels.
@@ -155,7 +155,11 @@ lib/
   router.dart  the routes, and where a bad URL goes
   providers.dart
                providers for content/ and space/
+  third_party_licences.dart
+               adds the licences in LICENSES/ to Flutter's licence page
 shaders/       scene.frag and its includes
+LICENSES/      the licence texts of works by other authors, one file each,
+               whose first line is the name of the work
 ```
 
 It is one package with these folders. If `space/` ever imports Flutter by
@@ -346,3 +350,14 @@ if the site grows long-form pages.
   - the render-resolution cap;
   - the frame-rate cap;
   - whether bodies use full art or placeholders.
+
+## Credits
+
+The site uses these works by other authors. Each one's licence text is in
+`LICENSES/`, and the site adds it to Flutter's licence page
+(`lib/third_party_licences.dart`).
+
+- **Star Nest** by Pablo Román Andrioli (Kali), with a noise clamp by
+  Beibei Wang and Huw Bowles: the sky.
+  <https://www.shadertoy.com/view/XlfGRj> and
+  <https://www.shadertoy.com/view/XllGzN>, MIT.

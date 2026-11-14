@@ -63,7 +63,7 @@ void main() {
     // Rendering is engine work, which the test's fake clock would stall.
     await tester.runAsync(() async {
       final program = await FragmentProgram.fromAsset(sceneShaderAsset);
-      final shader = SceneShader(program, looks);
+      final shader = SceneShader(program, looks, placeholders: true);
       addTearDown(shader.dispose);
 
       for (final MapEntry(key: name, value: camera) in cameras.entries) {
@@ -91,7 +91,8 @@ Future<ByteData> _render(
   FrameSnapshot frame,
   Screen screen,
 ) async {
-  shader.set(frame, screen);
+  // The sky is off, so the pixel ratio does not change the picture.
+  shader.set(frame, screen, 1);
   final recorder = PictureRecorder();
   Canvas(recorder).drawRect(
     Rect.fromLTWH(0, 0, screen.width, screen.height),

@@ -19,3 +19,8 @@ site by URL changes, and runs it in Chrome on this machine's GPU with the
 frame rate unlocked. It prints the frame times of each flight and each
 stop. It looks for Chrome where macOS puts it; `--chrome` gives another
 path.
+
+`pubspec.yaml` lists `shaders/scene.frag` only. `flutter test` and
+`flutter build` do not see a change to a file that it includes, such as
+`shaders/sky.glsl`, and keep the old compiled shader. After such a change,
+touch `shaders/scene.frag`. `flutter run` sees the change.
