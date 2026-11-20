@@ -2,18 +2,18 @@ import 'dart:ui';
 
 /// How the scene is coloured.
 class Looks {
-  const Looks({required this.centralBody, required this.bodies});
+  const Looks({required this.hole, required this.bodies});
 
-  /// The colour of the central body, which every category's body orbits.
-  final Color centralBody;
+  /// The colour of the hole at the origin.
+  final Color hole;
 
-  /// One colour per body slot, in content order: the first category's body
+  /// One colour per body slot, in page order: the first section's body
   /// takes the first colour.
   final List<Color> bodies;
 }
 
 const placeholderLooks = Looks(
-  centralBody: Color(0xFFFFD98C),
+  hole: Color(0xFFFFD98C),
   bodies: [
     Color(0xFF8CD9FF),
     Color(0xFFFFB3FF),

@@ -11,10 +11,14 @@ void main() {
   runApp(const ProviderScope(child: App()));
 }
 
-/// Path URLs with any leading slashes collapsed to one. The browser reads
-/// `//projects` as the host `projects`, and the app fails to start when
-/// Flutter writes that path back to the history.
+/// Path URLs with any leading slashes collapsed to one, and with the
+/// fragment, which names a section (`/#work`). The browser reads `//work`
+/// as the host `work`, and the app fails to start when Flutter writes that
+/// path back to the history.
 class _CollapsingPathUrlStrategy extends PathUrlStrategy {
+  _CollapsingPathUrlStrategy()
+    : super(BrowserPlatformLocation(), /* includeHash: */ true);
+
   @override
   String getPath() => super.getPath().replaceFirst(RegExp('^/+'), '/');
 }

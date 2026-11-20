@@ -2,7 +2,7 @@
 #include <flutter/runtime_effect.glsl>
 #include "sky.glsl"
 
-// The scene: the central body and up to four bodies, each a sphere drawn as
+// The scene: the hole and up to four bodies, each a sphere drawn as
 // a flat disc in one colour, over the sky (sky.glsl).
 //
 // A fragment shader runs once for every pixel and returns that pixel's
@@ -27,9 +27,9 @@ uniform vec3 uCamera;
 uniform vec3 uForward;
 uniform vec3 uRight;
 uniform vec3 uUp;
-// The central body, a sphere at the origin.
-uniform float uCentralBodyRadius;
-uniform vec3 uCentralBodyColour;
+// The hole, drawn as a sphere at the origin.
+uniform float uHoleShadowRadius;
+uniform vec3 uHoleColour;
 // Each body's sphere: its centre in xyz and its radius in w. A radius of 0
 // leaves the slot empty. Flutter's shaders can't use arrays, so each body
 // has its own uniform.
@@ -91,9 +91,9 @@ void main() {
   // the colour, so the nearest sphere wins and hides any behind it.
   float nearest = distanceToSphere(
     direction,
-    vec4(0.0, 0.0, 0.0, uCentralBodyRadius)
+    vec4(0.0, 0.0, 0.0, uHoleShadowRadius)
   );
-  vec3 colour = nearest < noHit ? uCentralBodyColour : vec3(0.0);
+  vec3 colour = nearest < noHit ? uHoleColour : vec3(0.0);
   float entry = distanceToSphere(direction, uBody0);
   if (entry < nearest) { nearest = entry; colour = uColour0; }
   entry = distanceToSphere(direction, uBody1);

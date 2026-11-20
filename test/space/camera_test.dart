@@ -5,6 +5,8 @@ import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../matchers.dart';
+
 void main() {
   test('the camera clamps the elevation, so the camera never looks straight up '
       'or down and never goes over the top', () {
@@ -27,12 +29,12 @@ void main() {
       final seen = DirectionAndDistance.of(camera.position - target);
       expect(
         seen.azimuth,
-        closeTo(camera.fromTarget.azimuth, 1e-9),
+        nearlyEquals(camera.fromTarget.azimuth),
         reason: reason,
       );
       expect(
         seen.elevation,
-        closeTo(camera.fromTarget.elevation, 1e-9),
+        nearlyEquals(camera.fromTarget.elevation),
         reason: reason,
       );
     }

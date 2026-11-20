@@ -8,13 +8,13 @@ import 'package:homepage_v2/scene/scene_view.dart';
 import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
 import 'package:homepage_v2/space/frame_snapshot.dart';
-import 'package:homepage_v2/space/site_space.dart';
+import 'package:homepage_v2/space/system.dart';
 import 'package:vector_math/vector_math_64.dart' show Sphere, Vector2, Vector3;
 
 void main() {
   // Pure colours, so each disc's pixels match exactly.
   const looks = Looks(
-    centralBody: Color(0xFFFFFFFF),
+    hole: Color(0xFFFFFFFF),
     bodies: [
       Color(0xFFFF0000),
       Color(0xFF00FF00),
@@ -34,7 +34,7 @@ void main() {
     Sphere.centerRadius(Vector3(9, -7, -6), 1.6),
   ];
   final cameras = {
-    'overview': Camera(
+    'aimed at the hole': Camera(
       target: Vector3.zero(),
       fromTarget: const DirectionAndDistance(
         azimuth: 0.3,
@@ -50,9 +50,9 @@ void main() {
 
   final discs = [
     (
-      'the central body',
-      Sphere.centerRadius(Vector3.zero(), centralBody.radius),
-      looks.centralBody,
+      'the hole',
+      Sphere.centerRadius(Vector3.zero(), holeShadowRadius),
+      looks.hole,
     ),
     for (final (i, body) in bodies.indexed) ('body $i', body, looks.bodies[i]),
   ];
@@ -67,7 +67,13 @@ void main() {
       addTearDown(shader.dispose);
 
       for (final MapEntry(key: name, value: camera) in cameras.entries) {
-        final frame = FrameSnapshot(time: 0, camera: camera, bodies: bodies);
+        final frame = FrameSnapshot(
+          actualTime: 0,
+          orbitTime: 0,
+          spinTime: 0,
+          camera: camera,
+          bodies: bodies,
+        );
         final pixels = await _render(shader, frame, screen);
 
         for (final (disc, sphere, colour) in discs) {

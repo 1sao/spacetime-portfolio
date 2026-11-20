@@ -24,14 +24,14 @@ class Camera {
     );
     final offset = clamped.toVector3();
     final forward = -offset.normalized();
-    final right = Vector3(0, 1, 0).cross(forward).normalized();
+    final right = forward.cross(Vector3(0, 1, 0)).normalized();
     return Camera._(
       target: target,
       fromTarget: clamped,
       position: target + offset,
       forward: forward,
       right: right,
-      up: forward.cross(right),
+      up: right.cross(forward),
     );
   }
 
@@ -59,13 +59,13 @@ class Camera {
 
   /// The direction to the right of the view, of length 1.
   ///
-  /// It is world y × [forward], which keeps it level. A camera at the origin
-  /// looking along +z, seen from just behind it:
+  /// It is [forward] × world y, which keeps it level. A camera on the +z
+  /// axis looking at the origin, seen from just behind it:
   ///
   /// ```text
   ///            +y  world up
   ///             ^
-  ///             |    +z  forward, into the screen
+  ///             |    -z  forward, into the screen
   ///             |   /
   ///             |  /
   ///             | /
@@ -119,7 +119,5 @@ class Screen {
 /// down.
 const maxElevation = 1.45;
 
-/// The angle that the shorter side of the screen spans, in rad. For
-/// example, from a camera 30 units from the central body, an orbit with a
-/// radius of 13.5 units fills approximately half of the shorter side.
+/// The angle that the shorter side of the screen spans, in rad.
 final fieldOfView = radians(82);

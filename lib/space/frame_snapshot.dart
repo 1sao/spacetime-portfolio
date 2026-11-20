@@ -6,33 +6,54 @@ import 'camera.dart';
 /// A single source of truth for everything that moves, at one moment. The
 /// frame loop builds one per frame.
 ///
-/// Caution: the vectors of [camera] and the spheres of [bodies] are mutable, and every
-/// reader of the frame shares them, so they should not be changed in
-/// place.
+/// Caution: the vectors of [camera] and the spheres of [bodies] are
+/// mutable, and every reader of the frame shares them, so they should not
+/// be changed in place.
 class FrameSnapshot {
   FrameSnapshot({
-    required this.time,
+    required this.actualTime,
+    required this.orbitTime,
+    required this.spinTime,
     required this.camera,
     required List<Sphere> bodies,
   }) : bodies = List.unmodifiable(bodies);
 
-  FrameSnapshot.at(double time, Camera camera, List<Body> bodies)
-    : this(
-        time: time,
-        camera: camera,
-        bodies: [
-          for (final body in bodies)
-            Sphere.centerRadius(body.positionAt(time), body.radius),
-        ],
-      );
+  /// The snapshot with [bodies] at their positions at [orbitTime].
+  FrameSnapshot.of(
+    List<Body> bodies, {
+    required double actualTime,
+    required double orbitTime,
+    required double spinTime,
+    required Camera camera,
+  }) : this(
+         actualTime: actualTime,
+         orbitTime: orbitTime,
+         spinTime: spinTime,
+         camera: camera,
+         bodies: [
+           for (final body in bodies)
+             Sphere.centerRadius(body.positionAt(orbitTime), body.radius),
+         ],
+       );
 
-  /// The time of the frame, in seconds on the clock of the scene.
-  final double time;
+  /// The seconds that the frame loop has run: real time, which only goes
+  /// forward. It stands still while the scene does.
+  final double actualTime;
+
+  /// The clock that moves the bodies along their orbits.
+  ///
+  /// The visitor sets it, so it can go back, and it does not follow
+  /// [actualTime].
+  final double orbitTime;
+
+  /// The clock that turns the bodies on their axes. The visitor sets it,
+  /// as [orbitTime].
+  final double spinTime;
 
   /// Where the scene is seen from.
   final Camera camera;
 
-  /// Each category's body, in content order, as a sphere: its centre and
+  /// Each section's body, in page order, as a sphere: its centre and
   /// radius, in world units.
   final List<Sphere> bodies;
 }

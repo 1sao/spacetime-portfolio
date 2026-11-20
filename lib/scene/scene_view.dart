@@ -26,9 +26,8 @@ final sceneShaderProvider = Provider.autoDispose<AsyncValue<SceneShader>>(
   }),
 );
 
-/// The scene: the central body and the category bodies, drawn by the shader
-/// from the current [FrameSnapshot]. The map page puts its overlays and
-/// controls on top of it.
+/// The scene: the hole and the sections' bodies, drawn by the shader from
+/// the current [FrameSnapshot]. The page scrolls on top of it.
 class SceneView extends ConsumerWidget {
   const SceneView({super.key});
 

@@ -5,7 +5,7 @@ import 'package:vector_math/vector_math_64.dart';
 /// A point as a direction from the origin and a distance from the origin.
 /// The direction is two angles: [azimuth] and [elevation].
 ///
-/// Azimuth 0 and elevation 0 point along -z. An increase in azimuth turns
+/// Azimuth 0 and elevation 0 point along +z. An increase in azimuth turns
 /// the direction toward +x. An increase in elevation turns it toward +y.
 class DirectionAndDistance {
   const DirectionAndDistance({
@@ -22,8 +22,8 @@ class DirectionAndDistance {
       return const DirectionAndDistance(azimuth: 0, elevation: 0, distance: 0);
     }
     return DirectionAndDistance(
-      // The angle in the xz plane, from -z toward +x.
-      azimuth: math.atan2(point.x, -point.z),
+      // The angle in the xz plane, from +z toward +x.
+      azimuth: math.atan2(point.x, point.z),
       // The sine of the elevation is the height divided by the distance.
       // Rounding errors can make this value a little more than 1 or less
       // than -1. The clamp keeps it in the range where asin has a result.
@@ -48,7 +48,7 @@ class DirectionAndDistance {
     return Vector3(
       flat * math.sin(azimuth),
       math.sin(elevation) * distance,
-      -flat * math.cos(azimuth),
+      flat * math.cos(azimuth),
     );
   }
 }

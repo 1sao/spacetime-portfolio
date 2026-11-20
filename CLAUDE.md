@@ -1,9 +1,9 @@
 # homepage_v2
 
-A portfolio presented as an interactive space map, in Flutter web.
+A portfolio as one scrolling page over a live star system, in Flutter web.
 
 Read `docs/architecture.md` before changing code. Its "Rules",
-"Libraries and state" and "Navigation" sections are binding.
+"Libraries and state" and "Routing" sections are binding.
 
 ## Conventions
 
@@ -26,5 +26,5 @@ flutter analyze
 dart format --set-exit-if-changed .
 flutter test
 flutter run -d web-server --web-port 8080
-dart run tool/measure_performance.dart   # frame times of a tour in Chrome; macOS, local only
+dart run tool/measure_performance.dart   # frame times in Chrome; macOS, local only
 ```

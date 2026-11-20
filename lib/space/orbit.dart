@@ -2,72 +2,86 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-/// An orbit of this radius, in world units, goes round once in
-/// [_referencePeriodSeconds].
-const _referenceRadius = 6.5;
-
-const _referencePeriodSeconds = 120.0;
-
-/// How a body moves round the origin, where the central body sits.
-sealed class Orbit {
-  const Orbit();
-
-  /// How fast a body on this orbit goes round, in rad per second.
-  double get angularSpeed;
-
-  /// The point [angle] rad round the orbit, in world units.
-  Vector3 pointAt(double angle);
-}
-
-/// A circle round the origin.
+/// The hole's mass times the gravitational constant.
 ///
-/// The circle starts flat in the xz plane, is tilted by [tilt] about the x
-/// axis, and is then turned by [node] about the y axis.
-final class CircularOrbit extends Orbit {
-  const CircularOrbit({
-    required this.radius,
-    required this.tilt,
-    required this.node,
-  }) : assert(radius > 0, 'A body without an orbit has NoOrbit.');
+/// A world unit is the hole's event-horizon radius, 2GM / c². With the
+/// speed of light c as 1, GM is half a world unit, and the time unit is the
+/// time light takes to cross one world unit.
+const _gravitationalParameter = 0.5;
 
-  /// The circle's radius, in world units.
-  final double radius;
+/// The hole's time units in one unit of orbit time. Orbit time runs fast,
+/// so the orbits move at a pace the visitor can see.
+const _orbitTimeScale = 5.8 * math.sqrt2;
 
-  /// How far the circle is tilted out of the xz plane, about the x axis, in
-  /// rad.
-  final double tilt;
-
-  /// How far the tilted circle is then turned about the y axis, in rad, which
-  /// sets the direction it tilts in. Astronomers call this angle the
-  /// longitude of the ascending node.
-  final double node;
-
-  /// By Kepler's third law, an orbit's period grows with its radius to the
-  /// power 1.5, so outer bodies are slower.
-  @override
-  double get angularSpeed {
-    final periodSeconds =
-        _referencePeriodSeconds * math.pow(radius / _referenceRadius, 1.5);
-    return 2 * math.pi / periodSeconds;
+/// A circle round the origin, where the hole sits.
+class Orbit {
+  /// The circle through [start], which is the body's position at orbit
+  /// time 0.
+  ///
+  /// With [tilt] 0, the circle is as flat as a circle through the origin
+  /// and [start] can be. [tilt] turns the circle about the line from the
+  /// origin to [start], in rad.
+  factory Orbit({required Vector3 start, required double tilt}) {
+    assert(start.length > 0, 'The orbit starts at the hole.');
+    assert(
+      start.x != 0 || start.z != 0,
+      'The orbit starts straight above or below the hole.',
+    );
+    final radius = start.length;
+    final outward = start / radius;
+    // The orbit's plane holds the line from the hole to [start], and can
+    // turn about it like a door on its hinge. The flattest of these planes
+    // has the normal (the direction at right angles to the plane) nearest
+    // to world up: world up with its part along the line taken away.
+    // [tilt] turns the plane from there.
+    final up = Vector3(0, 1, 0);
+    final flattestNormal = (up - outward * up.dot(outward)).normalized();
+    final normal = flattestNormal.turnedAbout(outward, tilt);
+    return Orbit._(
+      start: start.clone(),
+      // At right angles to the normal and to [start], and as long as
+      // [start], because the normal has length 1.
+      quarterTurn: normal.cross(start),
+      // Kepler's third law for a circular orbit.
+      angularSpeed:
+          math.sqrt(_gravitationalParameter / math.pow(radius, 3)) *
+          _orbitTimeScale,
+    );
   }
 
-  /// Angle 0 is where the circle crosses the xz plane on the +x side before
-  /// [node] turns it.
-  @override
-  Vector3 pointAt(double angle) => Matrix3.rotationY(node).transformed(
-    Matrix3.rotationX(tilt).transformed(
-      Vector3(radius * math.cos(angle), 0, radius * math.sin(angle)),
-    ),
-  );
+  const Orbit._({
+    required this.start,
+    required this._quarterTurn,
+    required this.angularSpeed,
+  });
+
+  /// The position at orbit time 0, in world units.
+  final Vector3 start;
+
+  /// The position a quarter turn after [start], in world units.
+  final Vector3 _quarterTurn;
+
+  /// How fast a body on this orbit goes round, in rad per unit of orbit
+  /// time.
+  final double angularSpeed;
+
+  /// The position at [orbitTime].
+  Vector3 pointAt(double orbitTime) {
+    final angle = angularSpeed * orbitTime;
+    return start * math.cos(angle) + _quarterTurn * math.sin(angle);
+  }
 }
 
-/// The body stays at the origin, as the central body does.
-final class NoOrbit extends Orbit {
-  const NoOrbit();
-
-  @override
-  double get angularSpeed => 0;
-
-  @override
-  Vector3 pointAt(double angle) => Vector3.zero();
+extension _Turn on Vector3 {
+  /// This vector turned by [angle] rad about [axis], which has length 1.
+  /// A positive angle turns counterclockwise, seen from the tip of [axis].
+  ///
+  /// Rodrigues' rotation formula: the part along [axis] stays, and the part
+  /// at right angles to it turns in the plane that `axis × this` spans.
+  Vector3 turnedAbout(Vector3 axis, double angle) {
+    final cos = math.cos(angle);
+    return this * cos +
+        axis.cross(this) * math.sin(angle) +
+        axis * (axis.dot(this) * (1 - cos));
+  }
 }

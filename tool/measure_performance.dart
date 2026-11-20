@@ -25,7 +25,7 @@ const _usageError = 64;
 const _macChrome =
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-/// The longest time that one tour can take. A tour takes about 80 s.
+/// The longest time that one tour can take. A tour takes about 10 s.
 const _tourTimeout = Duration(minutes: 3);
 
 const _viewport = DeviceViewport(

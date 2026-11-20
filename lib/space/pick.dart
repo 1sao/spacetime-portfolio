@@ -4,12 +4,11 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'camera.dart';
 import 'frame_snapshot.dart';
-import 'site_space.dart';
+import 'system.dart';
 
 /// The smallest radius on the screen that a body can be picked within, in
-/// logical pixels. At the overview, the bodies are only a few pixels
-/// across.
-const minPickRadius = 12.0;
+/// logical pixels, for bodies that are only a few pixels across.
+const minPickRadius = 14.0;
 
 /// The index in [FrameSnapshot.bodies] of the body at [pixel] of [screen],
 /// or null if there is none.
@@ -19,16 +18,16 @@ const minPickRadius = 12.0;
 int? pickBody(FrameSnapshot frame, Vector2 pixel, Screen screen) {
   final camera = frame.camera;
   final direction = camera.rayThrough(pixel, screen);
-  final centralBodyEntry = _entryDistance(
+  final holeEntry = _entryDistance(
     camera.position,
     direction,
-    Sphere.centerRadius(Vector3.zero(), centralBody.radius),
+    Sphere.centerRadius(Vector3.zero(), holeShadowRadius),
   );
 
-  /// The nearest body that the ray enters before the central body, with
+  /// The nearest body that the ray enters before the hole, with
   /// each body's sphere given by [sphereOf].
   int? nearestBody(Sphere Function(Sphere body) sphereOf) {
-    var nearest = centralBodyEntry;
+    var nearest = holeEntry;
     int? picked;
     for (final (i, body) in frame.bodies.indexed) {
       final entry = _entryDistance(camera.position, direction, sphereOf(body));

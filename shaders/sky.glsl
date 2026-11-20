@@ -24,10 +24,7 @@
 // fractalOffset, tile = tileSize, brightness = skyBrightness, darkmatter =
 // darkMatter, distfading = fadePerStep, saturation = skySaturation, r =
 // sampleIndex, s = depth, p = point, pa = previousLength, a = totalJump,
-// dm = darkness, v = light. In the prototype's port: d2 = lengthSquared,
-// l = pointLength, CLAMP_FROM = unclampedIterations, CLAMP_MAX = maxJump,
-// snapDir = snapToLattice, n, u and v = normal, across and along, e =
-// angles, t = slopes, uSnap = uSkyCells.
+// dm = darkness, v = light.
 
 // The number of lattice cells across each face of the cube around the
 // camera (see snapToLattice). scene_shader.dart sets it from the size of a

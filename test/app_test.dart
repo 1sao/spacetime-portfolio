@@ -4,7 +4,7 @@ import 'package:homepage_v2/app.dart';
 import 'package:material_ui/material_ui.dart';
 
 void main() {
-  testWidgets('the app starts dark, on a black background', (tester) async {
+  testWidgets("the app starts dark, on the page's background", (tester) async {
     await tester.pumpWidget(const ProviderScope(child: App()));
 
     final scaffold = find.byType(Scaffold);

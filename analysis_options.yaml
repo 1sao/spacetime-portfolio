@@ -14,6 +14,7 @@ linter:
     - always_declare_return_types
     - avoid_dynamic_calls
     - directives_ordering
+    - lines_longer_than_80_chars
     - prefer_final_locals
     - prefer_relative_imports
     - prefer_single_quotes

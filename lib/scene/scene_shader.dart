@@ -5,7 +5,7 @@ import 'package:vector_math/vector_math_64.dart';
 
 import '../space/camera.dart';
 import '../space/frame_snapshot.dart';
-import '../space/site_space.dart';
+import '../space/system.dart';
 import 'looks.dart';
 
 /// The scene's shader, `shaders/scene.frag`, ready to draw.
@@ -32,15 +32,14 @@ class SceneShader {
         for (var i = 0; i < bodySlots; i++)
           fragmentShader.getUniformVec4('uBody$i'),
       ] {
-    if (looks.bodies.length != bodySlots) {
-      throw ArgumentError('Looks need $bodySlots body colours.', 'looks');
-    }
+    assert(
+      looks.bodies.length == bodySlots,
+      'Looks need $bodySlots body colours, not ${looks.bodies.length}.',
+    );
     fragmentShader
-        .getSingleUniformFloat('uCentralBodyRadius')
-        .set(centralBody.radius);
-    fragmentShader
-        .getUniformVec3('uCentralBodyColour')
-        .setColour(looks.centralBody);
+        .getSingleUniformFloat('uHoleShadowRadius')
+        .set(holeShadowRadius);
+    fragmentShader.getUniformVec3('uHoleColour').setColour(looks.hole);
     for (var i = 0; i < bodySlots; i++) {
       fragmentShader.getUniformVec3('uColour$i').setColour(looks.bodies[i]);
     }
@@ -71,7 +70,10 @@ class SceneShader {
   /// [pixelRatio] device pixels for each of its logical pixels.
   void set(FrameSnapshot frame, Screen screen, double pixelRatio) {
     final bodies = frame.bodies;
-    assert(bodies.length <= bodySlots);
+    assert(
+      bodies.length <= bodySlots,
+      'The scene draws $bodySlots bodies, not ${bodies.length}.',
+    );
     _size.set(screen.width, screen.height);
     _focal.set(screen.focal);
     _skyCells.set(screen.skyCells(pixelRatio));

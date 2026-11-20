@@ -1,5 +1,5 @@
-// The performance tour: the real app, moved through its locations by URL
-// changes. Built and run by `tool/measure_performance.dart`.
+// The performance tour: the real app, at rest on the Landing. Built and
+// run by `tool/measure_performance.dart`.
 
 import 'dart:async';
 import 'dart:convert';
@@ -9,13 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:homepage_v2/app.dart';
-import 'package:homepage_v2/navigation/map_location.dart';
-import 'package:homepage_v2/navigation/map_navigation_state.dart';
-import 'package:homepage_v2/navigation/navigation.dart';
-import 'package:homepage_v2/providers.dart';
-import 'package:homepage_v2/router.dart';
 import 'package:homepage_v2/scene/scene_running.dart';
 import 'package:homepage_v2/scene/scene_view.dart';
 import 'package:web/web.dart' as web;
@@ -30,14 +24,10 @@ const _warmUpFrames = 30;
 /// The time after [_warmUpFrames] until the first measured frame.
 const _settle = Duration(seconds: 2);
 
-/// The time at rest at each location.
-const _dwell = Duration(seconds: 2);
-
-/// The longest time that a flight can take before the tour stops.
-const _flightTimeout = Duration(seconds: 10);
+/// The time at rest on the Landing.
+const _dwell = Duration(seconds: 4);
 
 Future<void> main() async {
-  usePathUrlStrategy();
   final container = ProviderContainer();
   final tour = _Tour(container)..reportErrors();
   runApp(UncontrolledProviderScope(container: container, child: const App()));
@@ -76,9 +66,6 @@ class _Tour {
     return recorder.endRecording();
   }();
 
-  /// The location that the tour is at.
-  MapLocation _location = const OverviewLocation();
-
   /// Adds each error of the app to [problems].
   void reportErrors() {
     final flutterOnError = FlutterError.onError;
@@ -107,23 +94,8 @@ class _Tour {
     await _container.read(sceneProgramProvider.future);
     await SchedulerBinding.instance.endOfFrames(_warmUpFrames);
     await Future<void>.delayed(_settle);
-    await _rest();
-
-    final categories = _container.read(contentProvider);
-    for (final category in categories) {
-      final categoryLocation = CategoryLocation(category);
-      await _goTo(categoryLocation);
-      if (category.messages.isNotEmpty) {
-        await _goTo(MessageLocation(category, category.messages.first));
-        await _goBack(to: categoryLocation);
-      }
-      await _goBack(to: const OverviewLocation());
-    }
-    // A flight from one body to another, without the overview between.
-    if (categories.length > 1) {
-      await _goTo(CategoryLocation(categories[0]));
-      await _goTo(CategoryLocation(categories[1]));
-    }
+    _recorder.startSegment('Landing');
+    await Future<void>.delayed(_dwell);
     _recorder.stop();
   }
 
@@ -145,52 +117,6 @@ class _Tour {
         segment: stats.toJson(),
     },
   };
-
-  Future<void> _rest() async {
-    _recorder.startSegment('rest ${_location.path}');
-    await Future<void>.delayed(_dwell);
-  }
-
-  /// Goes to [location] as a click does, then rests there.
-  Future<void> _goTo(MapLocation location) => _fly(
-    to: location,
-    start: () => _container.read(routerProvider).go(location.path),
-  );
-
-  /// Goes back in the browser's history, then rests at [to].
-  Future<void> _goBack({required MapLocation to}) =>
-      _fly(to: to, start: () => web.window.history.back());
-
-  Future<void> _fly({
-    required MapLocation to,
-    required void Function() start,
-  }) async {
-    _recorder.startSegment('fly ${_location.path} -> ${to.path}');
-    final arrival = _arrivalAt(to);
-    start();
-    await arrival;
-    _location = to;
-    await _rest();
-  }
-
-  /// Completes when the camera comes to rest at [location].
-  Future<void> _arrivalAt(MapLocation location) {
-    final arrived = Completer<void>();
-    final subscription = _container.listen(navigationProvider, (_, state) {
-      if (state is AtRest && state.location == location) {
-        if (!arrived.isCompleted) arrived.complete();
-      }
-    });
-    return arrived.future
-        .timeout(
-          _flightTimeout,
-          onTimeout: () => throw StateError(
-            'The flight from ${_location.path} to ${location.path} did not '
-            'arrive.',
-          ),
-        )
-        .whenComplete(subscription.close);
-  }
 }
 
 extension on SchedulerBinding {

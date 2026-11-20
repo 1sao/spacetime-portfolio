@@ -5,7 +5,7 @@ const resultPrefix = 'PERF_RESULT ';
 /// of a 120 Hz screen.
 const frameBudgetMs = 1000 / 120;
 
-/// The frame times of one segment of the tour, such as a flight or a dwell.
+/// The frame times of one segment of the tour, such as the Landing at rest.
 class SegmentStats {
   const SegmentStats({
     required this.frames,

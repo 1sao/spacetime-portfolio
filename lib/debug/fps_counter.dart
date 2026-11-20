@@ -9,9 +9,9 @@ import '../space/frame_snapshot.dart';
 ///
 /// Flutter's `PerformanceOverlay` draws nothing on the web, so this widget
 /// counts the frame snapshots that the frame loop makes. It measures the
-/// time between them on the scene's clock, which stands still while the
-/// scene does, so a pause is not a slow frame. While the scene stands still,
-/// the counter keeps its last value.
+/// time between them in the scene's actual time, which stands still while
+/// the scene does, so a pause is not a slow frame. While the scene stands
+/// still, the counter keeps its last value.
 class FpsCounter extends ConsumerStatefulWidget {
   const FpsCounter({super.key});
 
@@ -56,11 +56,11 @@ class _FpsCounterState extends ConsumerState<FpsCounter> {
   }
 
   void _countFrame() {
-    final time = _frames!.value.time;
+    final time = _frames!.value.actualTime;
     final lastTime = _lastTime;
     _lastTime = time;
-    // A navigation change also makes a snapshot, at the same time as the
-    // frame before it.
+    // A ticker counts from zero each time it starts, so after a pause the
+    // frame loop's first frame has the time of the last frame before it.
     if (lastTime == null || time <= lastTime) return;
 
     _frameCount++;

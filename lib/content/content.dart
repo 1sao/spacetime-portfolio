@@ -1,40 +1,29 @@
-/// One entry in a [Category], such as one project.
-class Message {
-  const Message({required this.slug, required this.title, required this.text});
+/// One item in a [Section], such as a project in Work.
+class Entry {
+  const Entry({required this.title, required this.text});
 
-  /// The second URL segment: `/<category>/<message>`.
-  final String slug;
   final String title;
   final String text;
 }
 
-/// A section of the site, such as projects or contact.
-class Category {
-  const Category({
-    required this.slug,
-    required this.name,
-    required this.messages,
+/// The sections of the page, in page order. The name is the section's URL
+/// fragment: `/#work`.
+enum SectionId { about, work, personal, contact, credits }
+
+/// A section of the page, such as About or Work.
+class Section {
+  const Section({
+    required this.id,
+    required this.title,
+    this.descriptor,
+    required this.entries,
   });
 
-  /// The first URL segment: `/<category>`.
-  final String slug;
-  final String name;
-  final List<Message> messages;
-}
+  final SectionId id;
+  final String title;
 
-extension CategoryWithSlug on List<Category> {
-  /// The category with [slug], or null if no category has it.
-  Category? withSlug(String slug) =>
-      where((category) => category.slug == slug).firstOrNull;
+  /// The short line under the section's title on the Landing, if the
+  /// section has a title there.
+  final String? descriptor;
+  final List<Entry> entries;
 }
-
-extension MessageWithSlug on List<Message> {
-  /// The message with [slug], or null if no message has it.
-  Message? withSlug(String slug) =>
-      where((message) => message.slug == slug).firstOrNull;
-}
-
-/// Slugs a category can't take: `/list` is the list view, and `flutter run`
-/// handles paths under `/assets`, `/canvaskit` and `/packages` itself
-/// instead of loading the app.
-const Set<String> reservedSlugs = {'list', 'assets', 'canvaskit', 'packages'};

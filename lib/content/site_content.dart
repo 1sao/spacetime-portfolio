@@ -1,64 +1,47 @@
 import 'content.dart';
 
-/// Everything the site says. Copy in brackets is placeholder.
-const List<Category> categories = [
-  Category(
-    slug: 'projects',
-    name: 'Projects',
-    messages: [
-      Message(
-        slug: 'project-01',
+/// Everything the site says, in page order. Copy in brackets is
+/// placeholder.
+const List<Section> sections = [
+  Section(
+    id: SectionId.about,
+    title: 'About',
+    descriptor: '[Who I am]',
+    entries: [Entry(title: '[About]', text: '[A short bio.]')],
+  ),
+  Section(
+    id: SectionId.work,
+    title: 'Work',
+    descriptor: '13 tenants · 1M+ downloads',
+    entries: [
+      Entry(
         title: '[Project 01]',
         text: '[What it is, your part, one result.]',
       ),
-      Message(
-        slug: 'project-02',
+      Entry(
         title: '[Project 02]',
         text: '[What it is, your part, one result.]',
       ),
-      Message(
-        slug: 'project-03',
-        title: '[Project 03]',
-        text: '[What it is, your part, one result.]',
-      ),
     ],
   ),
-  Category(
-    slug: 'experience',
-    name: 'Experience',
-    messages: [
-      Message(
-        slug: 'flight-log',
-        title: 'Flight log',
-        text: '[Your roles and years, as a short timeline.]',
-      ),
+  Section(
+    id: SectionId.personal,
+    title: 'Personal',
+    descriptor: '[Side projects]',
+    entries: [
+      Entry(title: '[Project 01]', text: '[What it is and why.]'),
+      Entry(title: 'This website', text: '[How it is made.]'),
     ],
   ),
-  Category(
-    slug: 'contact',
-    name: 'Contact',
-    messages: [
-      Message(
-        slug: 'comms',
-        title: 'Comms',
-        text: '[LinkedIn, GitHub and email.]',
-      ),
-    ],
+  Section(
+    id: SectionId.contact,
+    title: 'CV & Contact',
+    descriptor: '[CV, LinkedIn, GitHub, email]',
+    entries: [Entry(title: 'Comms', text: '[LinkedIn, GitHub and email.]')],
   ),
-  Category(
-    slug: 'category-04',
-    name: '[Category]',
-    messages: [
-      Message(
-        slug: 'message-01',
-        title: '[Message 01]',
-        text: '[Placeholder copy.]',
-      ),
-      Message(
-        slug: 'message-02',
-        title: '[Message 02]',
-        text: '[Placeholder copy.]',
-      ),
-    ],
+  Section(
+    id: SectionId.credits,
+    title: 'Credits',
+    entries: [Entry(title: '[Credits]', text: '[The works this site uses.]')],
   ),
 ];
