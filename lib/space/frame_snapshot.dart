@@ -12,6 +12,7 @@ class FrameSnapshot {
     required this.actualTime,
     required this.orbitTime,
     required this.spinTime,
+    required this.screen,
     required this.camera,
     required List<BodyPose> bodies,
   }) : bodies = List.unmodifiable(bodies);
@@ -23,11 +24,13 @@ class FrameSnapshot {
     required double actualTime,
     required double orbitTime,
     required double spinTime,
+    required Screen screen,
     required Camera camera,
   }) : this(
          actualTime: actualTime,
          orbitTime: orbitTime,
          spinTime: spinTime,
+         screen: screen,
          camera: camera,
          bodies: [
            for (final body in bodies)
@@ -48,6 +51,9 @@ class FrameSnapshot {
   /// The clock that turns the bodies on their axes. The visitor sets it,
   /// as [orbitTime].
   final double spinTime;
+
+  /// The scene's screen, which [camera] is made for.
+  final Screen screen;
 
   /// Where the scene is seen from.
   final Camera camera;

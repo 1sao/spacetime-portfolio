@@ -19,6 +19,7 @@ void main() {
           elevation: elevation,
           distance: 10,
         ),
+        focalLength: 500,
       );
       final reason = 'elevation $elevation';
       expect(camera.fromTarget.elevation.abs(), maxElevation, reason: reason);
@@ -38,5 +39,48 @@ void main() {
         reason: reason,
       );
     }
+  });
+
+  test('the ray through the pixel where a point lands passes through the '
+      'point, at any roll, for a camera aimed off the middle', () {
+    const screen = Screen(width: 400, height: 250);
+    final points = [Vector3(3, 1, -2), Vector3(-6, 4, 1), Vector3(2, -5, 5)];
+    for (final roll in [0.0, 0.6, math.pi / 2, -2.0]) {
+      final camera = Camera(
+        target: Vector3(0, 1, 0),
+        fromTarget: DirectionAndDistance.of(Vector3(8, 3, 20)),
+        focalLength: 320,
+        screenPoint: Vector2(0.3, 0.6),
+        roll: roll,
+      );
+      for (final point in points) {
+        final pixel = camera.project(point, screen)!;
+        final toPoint = (point - camera.position).normalized();
+        final ray = camera.rayThrough(pixel, screen);
+        expect(ray.distanceTo(toPoint), nearlyEquals(0), reason: 'roll $roll');
+      }
+    }
+  });
+
+  test('a quarter turn of roll shows what is left of the target above it', () {
+    const screen = Screen(width: 400, height: 400);
+    Camera cameraWith({required double roll}) => Camera(
+      target: Vector3.zero(),
+      fromTarget: const DirectionAndDistance(
+        azimuth: 0,
+        elevation: 0,
+        distance: 10,
+      ),
+      focalLength: 400,
+      roll: roll,
+    );
+    final left = Vector3(-1, 0, 0);
+    final level = cameraWith(roll: 0);
+    final rolled = cameraWith(roll: math.pi / 2);
+    final middle = level.targetPixel(screen);
+    expect(level.project(left, screen)!.x, lessThan(middle.x));
+    final shown = rolled.project(left, screen)!;
+    expect(shown.x, nearlyEquals(middle.x));
+    expect(shown.y, lessThan(middle.y));
   });
 }

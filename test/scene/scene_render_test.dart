@@ -31,8 +31,6 @@ void main() {
     rim: 0,
     bodies: {},
   );
-  // Not square, so swapped width and height would show.
-  const screen = Screen(width: 400, height: 250);
   // Large, and well off the view axis, so some discs are centred pixels
   // away from where their spheres' centres project (see _discCentre).
   // Apart and inside the screen, so each disc is whole. Clear of the
@@ -51,11 +49,22 @@ void main() {
         elevation: 0.14,
         distance: 84,
       ),
+      focalLength: 420,
     ),
     'nearer, aimed off the centre, which lands off the middle': Camera(
       target: Vector3(0, 1, 0),
       fromTarget: DirectionAndDistance.of(Vector3(28, 11, -56)),
+      focalLength: 420,
       screenPoint: Vector2(0.45, 0.55),
+    ),
+    // Not a quarter turn, so that the view is not lined up with the
+    // screen's axes.
+    'rolled, with a shorter focal length': Camera(
+      target: Vector3(0, 1, 0),
+      fromTarget: DirectionAndDistance.of(Vector3(28, 11, -56)),
+      focalLength: 300,
+      screenPoint: Vector2(0.45, 0.55),
+      roll: 0.6,
     ),
   };
 
@@ -101,17 +110,17 @@ void main() {
       final shader = await sceneShader();
       for (final MapEntry(key: name, value: camera) in cameras.entries) {
         final frame = _frame(camera, bodies);
-        final pixels = await _render(shader, frame, screen);
+        final pixels = await _render(shader, frame);
 
         for (final (disc, sphere, colour) in discs) {
           final drawn = _centroid(
             pixels,
-            screen,
+            _screen,
             colour,
             // The hole is drawn inside the lensing sphere.
             straightTo: disc == 'the hole' ? null : (camera, sphere),
           );
-          final expected = _discCentre(camera, sphere, screen);
+          final expected = _discCentre(camera, sphere, _screen);
           expect(drawn, isNotNull, reason: '$name: $disc is drawn');
           expect(expected, isNotNull, reason: '$name: $disc is in front');
           expect(
@@ -137,17 +146,20 @@ void main() {
       final pixels = await _render(
         shader,
         _frame(camera, [inside, ...bodies.skip(1)]),
-        screen,
       );
-      expect(_centroid(pixels, screen, bodyColours[0]), isNotNull);
+      expect(_centroid(pixels, _screen, bodyColours[0]), isNotNull);
     });
   });
 }
+
+// Not square, so swapped width and height would show.
+const _screen = Screen(width: 400, height: 250);
 
 FrameSnapshot _frame(Camera camera, List<Sphere> bodies) => FrameSnapshot(
   actualTime: 0,
   orbitTime: 0,
   spinTime: 0,
+  screen: _screen,
   camera: camera,
   bodies: [
     for (final sphere in bodies)
@@ -155,13 +167,10 @@ FrameSnapshot _frame(Camera camera, List<Sphere> bodies) => FrameSnapshot(
   ],
 );
 
-Future<ByteData> _render(
-  SceneShader shader,
-  FrameSnapshot frame,
-  Screen screen,
-) async {
+Future<ByteData> _render(SceneShader shader, FrameSnapshot frame) async {
+  final screen = frame.screen;
   // The sky is off, so the pixel ratio does not change the picture.
-  shader.set(frame, screen, pixelRatio: 1);
+  shader.set(frame, pixelRatio: 1, skyFocalLength: frame.camera.focalLength);
   final recorder = PictureRecorder();
   Canvas(recorder).drawRect(
     Rect.fromLTWH(0, 0, screen.width, screen.height),
@@ -195,7 +204,7 @@ Vector2? _discCentre(Camera camera, Sphere sphere, Screen screen) {
   final off = projected - axis;
   final d2 = sphere.center.distanceToSquared(camera.position);
   // tan θ is the projected centre's distance from the axis over focalLength.
-  final sec2 = 1 + off.length2 / (screen.focalLength * screen.focalLength);
+  final sec2 = 1 + off.length2 / (camera.focalLength * camera.focalLength);
   return axis + off * (d2 / (d2 - sphere.radius * sphere.radius * sec2));
 }
 

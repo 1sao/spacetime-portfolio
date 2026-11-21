@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
-import '../space/camera.dart';
 import '../space/frame_snapshot.dart';
 import 'frame_loop.dart';
 import 'hole_textures.dart';
@@ -141,6 +140,9 @@ class SceneView extends ConsumerWidget {
     // Browser zoom changes it, so the sky's lattice follows the zoom.
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     final softness = ref.watch(sceneSoftnessProvider);
+    final skyFocalLength = ref.watch(
+      sceneLayoutProvider.select((layout) => layout.skyFocalLength),
+    );
     return switch (ref.watch(sceneShaderProvider)) {
       AsyncData(value: final shader) => RepaintBoundary(
         child: ValueListenableBuilder(
@@ -153,6 +155,7 @@ class SceneView extends ConsumerWidget {
                 shader,
                 currentFrame,
                 pixelRatio,
+                skyFocalLength,
                 softness,
               ),
             ),
@@ -196,21 +199,33 @@ class SceneView extends ConsumerWidget {
 }
 
 class _ScenePainter extends CustomPainter {
-  _ScenePainter(this.shader, this.currentFrame, this.pixelRatio, this.softness)
-    : super(repaint: currentFrame);
+  _ScenePainter(
+    this.shader,
+    this.currentFrame,
+    this.pixelRatio,
+    this.skyFocalLength,
+    this.softness,
+  ) : super(repaint: currentFrame);
 
   final SceneShader shader;
   final ValueListenable<FrameSnapshot> currentFrame;
   final double pixelRatio;
+  final double skyFocalLength;
   final SceneSoftness softness;
 
   @override
   void paint(Canvas canvas, Size size) {
     final SceneSoftness(:scale, :border) = softness;
+    final frame = currentFrame.value;
+    assert(
+      size.width == frame.screen.width && size.height == frame.screen.height,
+      'The scene is $size, its frame '
+      '${frame.screen.width}x${frame.screen.height}.',
+    );
     shader.set(
-      currentFrame.value,
-      Screen(width: size.width, height: size.height),
+      frame,
       pixelRatio: pixelRatio,
+      skyFocalLength: skyFocalLength,
       scale: scale,
       border: border,
     );
@@ -230,5 +245,6 @@ class _ScenePainter extends CustomPainter {
       oldDelegate.shader != shader ||
       oldDelegate.currentFrame != currentFrame ||
       oldDelegate.pixelRatio != pixelRatio ||
+      oldDelegate.skyFocalLength != skyFocalLength ||
       oldDelegate.softness != softness;
 }

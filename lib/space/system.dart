@@ -25,16 +25,12 @@ const holeDiscOuterRadius = 10.2;
 /// How fast the disc turns about world y, in rad per unit of orbit time.
 const holeDiscSpinRate = 0.9;
 
-/// The camera of the Landing, which shows the whole system, with the hole
-/// a third of the way down the screen.
-final landingCamera = Camera(
-  target: Vector3.zero(),
-  fromTarget: const DirectionAndDistance(
-    azimuth: 0,
-    elevation: -0.12,
-    distance: 36,
-  ),
-  screenPoint: Vector2(0.5, 0.32),
+/// The direction and distance from the hole that the bodies' start points
+/// are laid out for: seen from there, they form one straight line.
+const lineUpViewpoint = DirectionAndDistance(
+  azimuth: 0,
+  elevation: -0.12,
+  distance: 36,
 );
 
 /// The body of each section that has one.
@@ -74,13 +70,14 @@ final Map<SectionId, Body> bodies = {
 };
 
 /// A body whose orbit starts in the plane of world x and the line of sight
-/// from [landingCamera], so seen from that camera all start points form
-/// one horizontal line.
+/// from [lineUpViewpoint], so seen from there all start points form one
+/// straight line.
 ///
 /// - [across]: world units along world x, which moves the start point
-///   sideways as seen from the camera (negative is left).
-/// - [toward]: world units toward the camera, which brings the start point
-///   nearer (negative is further away).
+///   along the line (negative is to the left, as seen from
+///   [lineUpViewpoint] with world y up).
+/// - [toward]: world units toward [lineUpViewpoint], which brings the start
+///   point nearer (negative is further away).
 /// - [radius]: the body's size, in world units.
 /// - [tilt]: turns the orbit's plane about the line from the hole to the
 ///   start point, in rad, so the body leaves its start point upward or
@@ -94,7 +91,7 @@ Body _body({
   required double spinRate,
   required double obliquity,
 }) {
-  final towardCamera = landingCamera.position.normalized();
+  final towardCamera = lineUpViewpoint.toVector3().normalized();
   return Body(
     orbit: Orbit(
       start: Vector3(across, 0, 0) + towardCamera * toward,

@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import '../space/body.dart';
-import '../space/camera.dart';
 import '../space/frame_snapshot.dart';
 import '../space/system.dart';
 import 'checked_uniforms.dart';
@@ -65,7 +64,7 @@ class SceneShader {
        _scale = fragmentShader.getSingleUniformFloat('uScale'),
        _border = fragmentShader.getSingleUniformFloat('uBorder'),
        _focalLength = fragmentShader.getSingleUniformFloat('uFocalLength'),
-       _skyCells = fragmentShader.getSingleUniformFloat('uSkyCells'),
+       _skyCellsUniform = fragmentShader.getSingleUniformFloat('uSkyCells'),
        _camera = fragmentShader.getUniformVec3('uCamera'),
        _forward = fragmentShader.getUniformVec3('uForward'),
        _right = fragmentShader.getUniformVec3('uRight'),
@@ -142,7 +141,7 @@ class SceneShader {
   final UniformFloatSlot _scale;
   final UniformFloatSlot _border;
   final UniformFloatSlot _focalLength;
-  final UniformFloatSlot _skyCells;
+  final UniformFloatSlot _skyCellsUniform;
   final UniformVec3Slot _camera;
   final UniformVec3Slot _forward;
   final UniformVec3Slot _right;
@@ -168,16 +167,17 @@ class SceneShader {
     }
   }
 
-  /// Sets the uniforms that change from frame to frame: the camera and the
-  /// bodies from [frame], and the drawn area from [screen], which has
-  /// [pixelRatio] device pixels for each of its logical pixels.
+  /// Sets the uniforms that change from frame to frame, all from [frame]:
+  /// the camera, the bodies and the screen. The screen has [pixelRatio]
+  /// device pixels for each logical pixel. The sky's lattice is made for
+  /// [skyFocalLength] (see `SceneLayout.skyFocalLength`).
   ///
-  /// For a soft scene (see `SceneSoftness`), the shader draws [screen] at
+  /// For a soft scene (see `SceneSoftness`), the shader draws the screen at
   /// [scale] times its size, with [border] more of its pixels on each side.
   void set(
-    FrameSnapshot frame,
-    Screen screen, {
+    FrameSnapshot frame, {
     required double pixelRatio,
+    required double skyFocalLength,
     double scale = 1,
     double border = 0,
   }) {
@@ -186,19 +186,19 @@ class SceneShader {
       bodies.length == _looks.length,
       'The frame has ${bodies.length} bodies, the looks ${_looks.length}.',
     );
+    final camera = frame.camera;
     _pixelRatio.set(pixelRatio * scale);
     _scale.set(scale);
     _border.set(border);
-    _focalLength.set(screen.focalLength);
+    _focalLength.set(camera.focalLength);
     // The sharp scene's lattice, so the sky stays the same when the scene
     // turns soft.
-    final skyCells = screen.skyCells(pixelRatio);
-    _skyCells.set(skyCells);
+    final skyCells = _skyCells(skyFocalLength, pixelRatio);
+    _skyCellsUniform.set(skyCells);
     final skyImage = _skyCache.imageFor(skyCells);
     final isNewSky = skyImage != _skyImage;
     _skyImage = skyImage;
-    final camera = frame.camera;
-    final targetPixel = camera.targetPixel(screen);
+    final targetPixel = camera.targetPixel(frame.screen);
     _targetPixel.set(targetPixel.x, targetPixel.y);
     _camera.setVector(camera.position);
     _forward.setVector(camera.forward);
@@ -261,33 +261,32 @@ extension on FragmentShader {
   }
 }
 
-extension _SkyLattice on Screen {
-  /// The number of cells across each face of the sky's lattice
-  /// (`latticePlace` in `shaders/sky.glsl`), so that every cell gets at
-  /// least one device pixel.
-  ///
-  /// A face spans π/2 rad, so each of its N cells spans π/(2N) rad. Take f as
-  /// [focalLength] and r as the pixel ratio. At the middle of the screen, a
-  /// device pixel spans 1/(f · r) rad, because f is in logical pixels per unit
-  /// of slope. So with N = π/2 · f · r, a cell is one pixel wide there.
-  ///
-  /// But a cell can be narrower than that: near an edge of the cube, a cell
-  /// is cos(π/4) ≈ 0.71 as wide along the edge. And when the view is turned
-  /// against the cube, the pixel grid is turned against the cells. A cell
-  /// narrower than a pixel can get no pixel, and then its stars blink.
-  /// [_skyCellsPerPixel] makes the cells wider than a pixel.
-  ///
-  /// N is a multiple of 32. Because N is even, the edge of the face at π/4
-  /// is a cell edge, so there are no narrow cells along the cube's edges.
-  /// The steps of 32 also keep the lattice the same through small changes
-  /// of the screen size, such as a phone's address bar.
-  ///
-  /// On a very large screen, N stops at [_maxSkyCells], and the cells are
-  /// wider than a pixel.
-  double skyCells(double pixelRatio) {
-    final cells = _skyCellsPerPixel * math.pi / 2 * focalLength * pixelRatio;
-    return (math.max(1, (cells / 32).round()) * 32.0).clamp(32, _maxSkyCells);
-  }
+/// The number of cells across each face of the sky's lattice
+/// (`latticePlace` in `shaders/sky.glsl`) for [focalLength] and
+/// [pixelRatio], so that every cell gets at least one device pixel.
+///
+/// A face spans π/2 rad, so each of its N cells spans π/(2N) rad. Take f as
+/// [focalLength] and r as the pixel ratio. At the middle of the screen, a
+/// device pixel spans 1/(f · r) rad, because f is in logical pixels per unit
+/// of slope. So with N = π/2 · f · r, a cell is one pixel wide there. With a
+/// longer focal length, a cell is wider than that.
+///
+/// But a cell can be narrower than that: near an edge of the cube, a cell
+/// is cos(π/4) ≈ 0.71 as wide along the edge. And when the view is turned
+/// against the cube, the pixel grid is turned against the cells. A cell
+/// narrower than a pixel can get no pixel, and then its stars blink.
+/// [_skyCellsPerPixel] makes the cells wider than a pixel.
+///
+/// N is a multiple of 32. Because N is even, the edge of the face at π/4
+/// is a cell edge, so there are no narrow cells along the cube's edges.
+/// The steps of 32 also keep the lattice the same through small changes
+/// of the screen size.
+///
+/// On a very large screen, N stops at [_maxSkyCells], and the cells are
+/// wider than a pixel.
+double _skyCells(double focalLength, double pixelRatio) {
+  final cells = _skyCellsPerPixel * math.pi / 2 * focalLength * pixelRatio;
+  return (math.max(1, (cells / 32).round()) * 32.0).clamp(32, _maxSkyCells);
 }
 
 /// The most cells across a face of the sky's lattice: the baked sky is 3

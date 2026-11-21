@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../debug/fps_counter.dart';
 import '../scene/scene_view.dart';
-import '../viewport/viewport_heights.dart';
+import '../viewport/window_size.dart';
 import 'reading_screen.dart';
 import 'spacing.dart';
 
@@ -17,7 +17,7 @@ import 'spacing.dart';
 /// The scene is as tall as the window with the address bar hidden, so
 /// while the bar shows, the scene's bottom is below the window's edge. The
 /// first screen is as tall as the window with the bar shown, so the strip
-/// shows when the page opens (see [ViewportHeights]).
+/// shows when the page opens (see [WindowSize]).
 class SitePage extends ConsumerWidget {
   const SitePage({super.key});
 
@@ -25,7 +25,7 @@ class SitePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final heights = ref.watch(viewportHeightsProvider);
+    final window = ref.watch(windowSizeProvider);
     return Scaffold(
       body: Stack(
         children: [
@@ -33,13 +33,15 @@ class SitePage extends ConsumerWidget {
             top: 0,
             left: 0,
             right: 0,
-            height: heights.large,
+            height: window.largeHeight,
             child: const SceneView(),
           ),
           SingleChildScrollView(
             child: Column(
               children: [
-                SizedBox(height: math.max(0, heights.small - SiteSpacing.peek)),
+                SizedBox(
+                  height: math.max(0, window.smallHeight - SiteSpacing.peek),
+                ),
                 const ReadingScreen(),
               ],
             ),

@@ -4,12 +4,12 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'direction_and_distance.dart';
 
-/// A camera that looks at a point, its target, upright: it never rolls.
+/// A camera that looks at a point, its target.
 ///
 /// The camera's position is given as a direction and a distance from the
-/// target. From them, the camera calculates its position as a point and
-/// its forward, right and up directions, which the shader and the
-/// projection read.
+/// target. From them and [roll], the camera calculates its position as a
+/// point and its forward, right and up directions, which the shader and
+/// the projection read.
 class Camera {
   /// The camera clamps the elevation of [fromTarget] to ±[maxElevation].
   /// [screenPoint] is where [target] lands on the screen: the middle by
@@ -17,9 +17,12 @@ class Camera {
   factory Camera({
     required Vector3 target,
     required DirectionAndDistance fromTarget,
+    required double focalLength,
     Vector2? screenPoint,
+    double roll = 0,
   }) {
     assert(fromTarget.distance > 0, 'The camera is at its target.');
+    assert(focalLength > 0, 'The focal length is $focalLength.');
     final clamped = DirectionAndDistance(
       azimuth: fromTarget.azimuth,
       elevation: fromTarget.elevation.clamp(-maxElevation, maxElevation),
@@ -27,22 +30,29 @@ class Camera {
     );
     final offset = clamped.toVector3();
     final forward = -offset.normalized();
-    final right = forward.cross(Vector3(0, 1, 0)).normalized();
+    // The directions of the camera that does not roll.
+    final levelRight = forward.cross(Vector3(0, 1, 0)).normalized();
+    final levelUp = levelRight.cross(forward);
+    final (cos, sin) = (math.cos(roll), math.sin(roll));
     return Camera._(
       target: target,
       fromTarget: clamped,
+      focalLength: focalLength,
       screenPoint: screenPoint ?? Vector2(0.5, 0.5),
+      roll: roll,
       position: target + offset,
       forward: forward,
-      right: right,
-      up: right.cross(forward),
+      right: levelRight * cos + levelUp * sin,
+      up: levelUp * cos - levelRight * sin,
     );
   }
 
   const Camera._({
     required this.target,
     required this.fromTarget,
+    required this.focalLength,
     required this.screenPoint,
+    required this.roll,
     required this.position,
     required this.forward,
     required this.right,
@@ -59,6 +69,17 @@ class Camera {
   /// [target] lands at this point.
   final Vector2 screenPoint;
 
+  /// How far the camera zooms in, in logical pixels: a point that is s
+  /// units to the side for each unit ahead of the camera lands
+  /// s × [focalLength] pixels from [targetPixel].
+  final double focalLength;
+
+  /// The angle in rad by which the camera turns about [forward],
+  /// counterclockwise as seen from behind the camera. The picture turns
+  /// clockwise by the same angle: at π/2, what is to the left of the
+  /// target shows above it.
+  final double roll;
+
   /// The direction and the distance from [target] to the camera. The
   /// elevation stays within ±[maxElevation].
   final DirectionAndDistance fromTarget;
@@ -71,8 +92,10 @@ class Camera {
 
   /// The direction to the right of the view, of length 1.
   ///
-  /// It is [forward] × world y, which keeps it level. A camera on the +z
-  /// axis looking at the origin, seen from just behind it:
+  /// With [roll] 0 it is [forward] × world y, which keeps it level; [roll]
+  /// turns it about [forward]. A
+  /// camera on the +z axis looking at the origin, seen from just behind
+  /// it:
   ///
   /// ```text
   ///            +y  world up
@@ -85,15 +108,16 @@ class Camera {
   /// ```
   final Vector3 right;
 
-  /// The direction to the top of the view, of length 1: world y, tilted
-  /// with [forward] so the two stay at right angles.
+  /// The direction to the top of the view, of length 1. With [roll] 0 it
+  /// is world y, tilted with [forward] so the two stay at right angles;
+  /// [roll] turns it about [forward].
   final Vector3 up;
 
   /// The direction of the ray from the camera through [pixel] of [screen],
   /// of length 1. It is the same formula as `main()` in
   /// `shaders/scene.frag`, so the ray goes where the shader's ray goes.
   Vector3 rayThrough(Vector2 pixel, Screen screen) {
-    final slope = (pixel - targetPixel(screen)) / screen.focalLength;
+    final slope = (pixel - targetPixel(screen)) / focalLength;
     return (forward + right * slope.x - up * slope.y).normalized();
   }
 
@@ -107,7 +131,7 @@ class Camera {
     final offset = point - position;
     final depth = offset.dot(forward);
     if (depth <= 0) return null;
-    final scale = screen.focalLength / depth;
+    final scale = focalLength / depth;
     return targetPixel(screen) +
         Vector2(offset.dot(right) * scale, -offset.dot(up) * scale);
   }
@@ -119,19 +143,6 @@ class Screen {
 
   final double width;
   final double height;
-
-  /// How far the camera zooms in, in pixels: a point that is s units to
-  /// the side for each unit ahead of the camera lands s × [focalLength]
-  /// pixels from [Camera.targetPixel].
-  ///
-  /// It grows with the width, so the view across the screen is the same
-  /// angle on every screen: about 51°, or 53° on a screen narrower than
-  /// 700. On a screen more than 1.8 times as wide as it is high, the view
-  /// down the screen stays at about 30° and the view across gets wider.
-  double get focalLength {
-    final perWidth = width < 700 ? 1.0 : 1.05;
-    return math.min(width * perWidth, height * 1.9);
-  }
 }
 
 /// The maximum angle up or down from the target to the camera, in rad

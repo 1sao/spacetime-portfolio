@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import 'camera.dart';
 import 'frame_snapshot.dart';
 import 'system.dart';
 
@@ -10,14 +9,14 @@ import 'system.dart';
 /// logical pixels, for bodies that are only a few pixels across.
 const minPickRadius = 14.0;
 
-/// The index in [FrameSnapshot.bodies] of the body at [pixel] of [screen],
-/// or null if there is none.
+/// The index in [FrameSnapshot.bodies] of the body at [pixel] of the
+/// frame's screen, or null if there is none.
 ///
 /// The ray picks the nearest body it enters using bodies' actual size,
 /// or [minPickRadius] as a fallback.
-int? pickBody(FrameSnapshot frame, Vector2 pixel, Screen screen) {
+int? pickBody(FrameSnapshot frame, Vector2 pixel) {
   final camera = frame.camera;
-  final direction = camera.rayThrough(pixel, screen);
+  final direction = camera.rayThrough(pixel, frame.screen);
   final holeEntry = _entryDistance(
     camera.position,
     direction,
@@ -49,7 +48,7 @@ int? pickBody(FrameSnapshot frame, Vector2 pixel, Screen screen) {
         // units. It is negative for a body behind the camera, so the body
         // keeps its own radius.
         final depth = (body.center - camera.position).dot(camera.forward);
-        final minRadius = minPickRadius * depth / screen.focalLength;
+        final minRadius = minPickRadius * depth / camera.focalLength;
         return Sphere.centerRadius(
           body.center,
           math.max(body.radius, minRadius),

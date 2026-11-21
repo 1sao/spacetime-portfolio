@@ -32,9 +32,9 @@ uniform float uPixelRatio;
 // border round it, in its own pixels. The border is out of the window.
 uniform float uScale;
 uniform float uBorder;
-// How far the camera zooms in, in pixels (Screen.focalLength): a point s
-// units to the side for each unit ahead lands uFocalLength * s pixels from
-// uTargetPixel.
+// How far the camera zooms in, in logical pixels (Camera.focalLength): a
+// point s units to the side for each unit ahead lands uFocalLength * s pixels
+// from uTargetPixel.
 uniform float uFocalLength;
 // The camera's position.
 uniform vec3 uCamera;

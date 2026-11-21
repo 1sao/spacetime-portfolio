@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers.dart';
 import '../space/camera.dart';
 import '../space/frame_snapshot.dart';
-import '../space/system.dart';
+import '../viewport/window_size.dart';
+import 'scene_layout.dart';
 import 'scene_running.dart';
 
 /// The current [FrameSnapshot], as a listenable. While something watches
@@ -16,21 +17,28 @@ final frameSnapshotListenableProvider =
     Provider.autoDispose<ValueListenable<FrameSnapshot>>((ref) {
       final content = ref.watch(contentProvider);
       final bodies = ref.watch(bodiesProvider);
-      final camera = ref.watch(sceneCameraProvider);
       // The page order gives each body its slot in the shader.
       final bodiesInPageOrder = [
         for (final section in content) ?bodies[section.id],
       ];
+      var layout = ref.read(sceneLayoutProvider);
 
       FrameSnapshot frameAt(double actualTime) => FrameSnapshot.of(
         bodiesInPageOrder,
         actualTime: actualTime,
         orbitTime: 0,
         spinTime: 0,
-        camera: camera.value,
+        screen: layout.screen,
+        camera: layout.landingCamera,
       );
 
       final currentFrame = ValueNotifier(frameAt(0));
+      // Listened to, not watched: a rebuild of this provider would start
+      // the actual time again from zero.
+      ref.listen(sceneLayoutProvider, (_, newLayout) {
+        layout = newLayout;
+        currentFrame.value = frameAt(currentFrame.value.actualTime);
+      });
       // The actual time when the ticker last started. A started ticker
       // counts from zero.
       var startedAt = 0.0;
@@ -54,12 +62,15 @@ final frameSnapshotListenableProvider =
       return currentFrame;
     });
 
-/// The camera the scene is seen from, which the frame loop reads every
-/// frame.
-final sceneCameraProvider = Provider<ValueNotifier<Camera>>((ref) {
-  final camera = ValueNotifier(landingCamera);
-  ref.onDispose(camera.dispose);
-  return camera;
+/// How the scene is framed, for the scene's size: the window's width, and
+/// its height with the address bar hidden.
+final sceneLayoutProvider = Provider<SceneLayout>((ref) {
+  final (:width, :height) = ref.watch(
+    windowSizeProvider.select(
+      (window) => (width: window.width, height: window.largeHeight),
+    ),
+  );
+  return SceneLayout(Screen(width: width, height: height));
 });
 
 extension _FractionalSeconds on Duration {

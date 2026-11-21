@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:homepage_v2/scene/frame_loop.dart';
 import 'package:homepage_v2/space/frame_snapshot.dart';
 
 import '../fake_content.dart';
+import '../pump_app.dart';
 
 void main() {
   testWidgets('the scene stands still while the app is not resumed', (
@@ -35,6 +38,26 @@ void main() {
     } finally {
       container.dispose();
     }
+  });
+
+  testWidgets('while the scene stands still, a resize to a phone frames '
+      'the Landing as a column', (tester) async {
+    addTearDown(tester.view.reset);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1280, 800);
+    await pumpApp(tester);
+    final binding = tester.binding;
+    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    addTearDown(
+      () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
+    );
+    FrameSnapshot currentFrame() =>
+        tester.container().read(frameSnapshotListenableProvider).value;
+    expect(currentFrame().camera.roll, 0);
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pump();
+    expect(currentFrame().camera.roll, math.pi / 2);
   });
 }
 

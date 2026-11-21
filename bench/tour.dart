@@ -1,6 +1,5 @@
-// The performance tour: the real app at rest, sharp and soft, on the
-// Landing and with the hole up close. Built and run by
-// `tool/measure_performance.dart`.
+// The performance tour: the real app at rest on the Landing, sharp and
+// soft. Built and run by `tool/measure_performance.dart`.
 //
 // The URL's query sets the tour: `settle` and `dwell` in seconds, and
 // `segments`, the names of the segments to measure, separated by commas
@@ -16,12 +15,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:homepage_v2/app.dart';
-import 'package:homepage_v2/scene/frame_loop.dart';
 import 'package:homepage_v2/scene/scene_running.dart';
 import 'package:homepage_v2/scene/scene_view.dart';
-import 'package:homepage_v2/space/camera.dart';
-import 'package:homepage_v2/space/direction_and_distance.dart';
-import 'package:vector_math/vector_math_64.dart';
 import 'package:web/web.dart' as web;
 
 import 'src/frame_recorder.dart';
@@ -46,17 +41,6 @@ final _dwell = _seconds('dwell', 2);
 
 /// The segments to measure, or null for all of them.
 final Set<String>? _segments = _query['segments']?.split(',').toSet();
-
-/// The camera of the Credits section, with the hole in the middle of the
-/// screen: the scene at its most costly.
-final _holeUpClose = Camera(
-  target: Vector3.zero(),
-  fromTarget: const DirectionAndDistance(
-    azimuth: 0.55,
-    elevation: 0.13,
-    distance: 15,
-  ),
-);
 
 Future<void> main() async {
   final container = ProviderContainer();
@@ -129,12 +113,6 @@ class _Tour {
     final softness = _container.read(sceneSoftnessProvider);
     softness.value = SceneSoftness.soft;
     await _measure('Landing soft');
-
-    _container.read(sceneCameraProvider).value = _holeUpClose;
-    softness.value = SceneSoftness.sharp;
-    await _measure('Hole up close');
-    softness.value = SceneSoftness.soft;
-    await _measure('Hole up close soft');
   }
 
   /// Waits for the scene to settle, then measures it as [segment], if the

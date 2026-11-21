@@ -40,6 +40,14 @@ not yet move anything.
   depends only on the direction. So it is taken once at a fixed set of
   directions, as many as the screen's pixels need, and the shader reads it
   from that image.
+- **Framing:** in addition to its position and target, a camera has the
+  point of the screen where its target lands, a roll and a focal length.
+  `SceneLayout`, in `scene/`, gives these three for the scene's size, with
+  Material 3's window size classes. Under 600 px wide, the Landing's line
+  of bodies stands upright, with a quarter turn of roll. The sky's set of
+  directions is made for the shortest focal length of the layout, so that
+  every star gets a pixel in every framing, and the sky is not baked again
+  when the camera moves between framings.
 - **Overlays are Flutter widgets,** such as the body titles and their
   leaders, placed by the CPU projection. It does not bend rays: the design
   keeps the bodies that have titles out of the region where the hole's
@@ -59,11 +67,11 @@ lib/
   content/     sections and their entries: data only
   space/       pure Dart: the system (orbits, bodies), the camera,
                projection, pick, the per-frame snapshot
-  scene/       the frame loop, the shader wrapper with its typed uniform
-               layout, the looks
+  scene/       the frame loop, the framing for the screen's size, the
+               shader wrapper with its typed uniform layout, the looks
   ui/          the page: the Landing, the reading screen, the colours
-  viewport/    the window's height with the address bar shown and hidden,
-               measured in the browser
+  viewport/    the window's width, and its height with the address bar
+               shown and hidden, measured in the browser
   debug/       debug tools, kept apart from the rest
   router.dart  the routes
   providers.dart
@@ -97,8 +105,9 @@ can use them.
    - Uniforms are set through one typed layout class, which binds each
      uniform by name and checks its type, so a mismatch throws when the
      shader loads.
-   - The shader gets the camera's position and directions from Dart, so the
-     look-at maths exists only once.
+   - The shader gets the camera's position, directions, focal length and
+     target pixel from Dart, so the look-at maths and the roll exist only
+     once.
 3. **Content is separate from looks.** What a section says is content. Where
    its body orbits and how it is drawn are settings, keyed by section id, so
    reordering the content does not move the bodies.
@@ -123,8 +132,9 @@ can use them.
   hidden (CSS `lvh`), and the page's layout, such as the Landing's height,
   uses the window's height with the bar shown (`svh`). Neither changes
   when the bar moves, so the layout does not jump during a scroll.
-- **Vectors:** `vector_math_64`. Azimuth 0 points along +z, and the
-  camera's right is forward × world up.
+- **Vectors:** `vector_math_64`. Azimuth 0 points along +z. A camera that
+  does not roll has forward × world up as its right; a roll turns right and
+  up about forward.
 
 ## Routing
 
