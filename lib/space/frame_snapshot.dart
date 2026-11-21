@@ -1,24 +1,23 @@
-import 'package:vector_math/vector_math_64.dart';
-
 import 'body.dart';
 import 'camera.dart';
 
 /// A single source of truth for everything that moves, at one moment. The
 /// frame loop builds one per frame.
 ///
-/// Caution: the vectors of [camera] and the spheres of [bodies] are
-/// mutable, and every reader of the frame shares them, so they should not
-/// be changed in place.
+/// Caution: the vectors of [camera] and [bodies] are mutable, and every
+/// reader of the frame shares them, so they should not be changed in
+/// place.
 class FrameSnapshot {
   FrameSnapshot({
     required this.actualTime,
     required this.orbitTime,
     required this.spinTime,
     required this.camera,
-    required List<Sphere> bodies,
+    required List<BodyPose> bodies,
   }) : bodies = List.unmodifiable(bodies);
 
-  /// The snapshot with [bodies] at their positions at [orbitTime].
+  /// The snapshot with [bodies] at their poses at [orbitTime] and
+  /// [spinTime].
   FrameSnapshot.of(
     List<Body> bodies, {
     required double actualTime,
@@ -32,7 +31,7 @@ class FrameSnapshot {
          camera: camera,
          bodies: [
            for (final body in bodies)
-             Sphere.centerRadius(body.positionAt(orbitTime), body.radius),
+             body.poseAt(orbitTime: orbitTime, spinTime: spinTime),
          ],
        );
 
@@ -53,7 +52,6 @@ class FrameSnapshot {
   /// Where the scene is seen from.
   final Camera camera;
 
-  /// Each section's body, in page order, as a sphere: its centre and
-  /// radius, in world units.
-  final List<Sphere> bodies;
+  /// Each section's body, in page order.
+  final List<BodyPose> bodies;
 }

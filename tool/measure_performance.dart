@@ -1,8 +1,13 @@
 // Builds the performance tour (`bench/tour.dart`), runs it in Chrome with
 // the frame rate unlocked, and prints the frame times of each segment.
 //
+// Each --setup is a URL query for the app, such as `lensing=12`.
+// One build serves every setup, and the setups take turns, so a busy
+// moment of the machine hits each of them alike.
+//
 // Usage: dart run tool/measure_performance.dart [--runs 3] [--no-build]
-//          [--headed] [--chrome <path>] [--update-baseline]
+//          [--setup <query>]... [--segments <names>] [--settle <s>]
+//          [--dwell <s>] [--headed] [--chrome <path>] [--update-baseline]
 
 import 'dart:async';
 import 'dart:convert';
@@ -25,7 +30,7 @@ const _usageError = 64;
 const _macChrome =
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-/// The longest time that one tour can take. A tour takes about 10 s.
+/// The longest time that one tour can take. A tour takes about 20 s.
 const _tourTimeout = Duration(minutes: 3);
 
 const _viewport = DeviceViewport(
@@ -38,6 +43,17 @@ Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
     ..addOption('runs', defaultsTo: '3', help: 'How many tours to run.')
     ..addFlag('build', defaultsTo: true, help: 'Build the tour first.')
+    ..addMultiOption(
+      'setup',
+      splitCommas: false,
+      help: 'A URL query for the app, such as lensing=12. One table each.',
+    )
+    ..addOption(
+      'segments',
+      help: 'The segments to measure, separated by commas. All by default.',
+    )
+    ..addOption('settle', help: 'Seconds from a change to its segment.')
+    ..addOption('dwell', help: 'Seconds that each segment measures.')
     ..addFlag('headed', help: 'Show the Chrome window.')
     ..addOption(
       'chrome',
@@ -52,7 +68,12 @@ Future<void> main(List<String> arguments) async {
     ..addFlag('help', abbr: 'h', negatable: false);
   final options = parser.parse(arguments);
   final runs = int.tryParse(options.option('runs')!);
-  if (options.flag('help') || runs == null || runs < 1) {
+  final setups = [...options.multiOption('setup')];
+  if (setups.isEmpty) setups.add('');
+  if (options.flag('help') ||
+      runs == null ||
+      runs < 1 ||
+      (options.flag('update-baseline') && setups.length > 1)) {
     stdout.writeln(parser.usage);
     if (!options.flag('help')) exitCode = _usageError;
     return;
@@ -62,12 +83,18 @@ Future<void> main(List<String> arguments) async {
 
   if (options.flag('build')) await _build();
 
+  final tourQuery = [
+    for (final name in ['segments', 'settle', 'dwell'])
+      if (options.option(name) case final value?)
+        '$name=${Uri.encodeQueryComponent(value)}',
+  ];
+
   final server = await shelf_io.serve(
     createStaticHandler(_buildDir, defaultDocument: 'index.html'),
     InternetAddress.loopbackIPv4,
     0,
   );
-  final Map<String, Object?> results;
+  final List<Map<String, Object?>> allResults;
   try {
     final browser = await puppeteer.launch(
       executablePath: options.option('chrome'),
@@ -81,17 +108,30 @@ Future<void> main(List<String> arguments) async {
         throw StateError('Chrome draws without the GPU: $renderer');
       }
       final url = 'http://${server.address.host}:${server.port}/';
-      final tours = <Map<String, Object?>>[];
+      final tours = [for (final _ in setups) <Map<String, Object?>>[]];
       for (var run = 1; run <= runs; run++) {
-        stdout.writeln('Tour $run of $runs...');
-        tours.add(await browser.runTour(url));
+        for (final (index, setup) in setups.indexed) {
+          stdout.writeln(
+            'Tour $run of $runs${setup.isEmpty ? '' : ', $setup'}...',
+          );
+          final query = [if (setup.isNotEmpty) setup, ...tourQuery].join('&');
+          tours[index].add(
+            await browser.runTour(query.isEmpty ? url : '$url?$query'),
+          );
+        }
       }
-      results = {
-        'date': DateTime.now().toIso8601String(),
-        'chrome': await browser.version,
-        'renderer': renderer,
-        'tours': tours,
-      };
+      final date = DateTime.now().toIso8601String();
+      final chrome = await browser.version;
+      allResults = [
+        for (final (index, setup) in setups.indexed)
+          {
+            'date': date,
+            'setup': setup,
+            'chrome': chrome,
+            'renderer': renderer,
+            'tours': tours[index],
+          },
+      ];
     } finally {
       await browser.close();
     }
@@ -99,35 +139,43 @@ Future<void> main(List<String> arguments) async {
     await server.close();
   }
 
-  final resultsFile = File(
-    '$_resultsDir/${results['date']}.json'.replaceAll(':', '-'),
-  );
-  await resultsFile.create(recursive: true);
-  await resultsFile.writeAsString(results.prettyJson);
-
   final baselineFile = File(_baselinePath);
   final baseline = await baselineFile.exists()
       ? jsonDecode(await baselineFile.readAsString()) as Map<String, Object?>
       : null;
-  stdout
-    ..writeln()
-    ..writeln(_report(results, baseline))
-    ..writeln('Results: ${resultsFile.path}');
-
-  final problems = [
-    for (final (index, tour) in results.tours.indexed)
-      for (final problem in tour['problems']! as List<Object?>)
-        'Tour ${index + 1}: $problem',
-  ];
-  if (problems.isNotEmpty) {
-    stderr.writeln(
-      'Not valid, left out of the table:\n  ${problems.join('\n  ')}',
+  var hasProblems = false;
+  for (final (index, results) in allResults.indexed) {
+    final setup = results['setup']! as String;
+    final resultsFile = File(
+      '$_resultsDir/${results['date']}-$index.json'.replaceAll(':', '-'),
     );
+    await resultsFile.create(recursive: true);
+    await resultsFile.writeAsString(results.prettyJson);
+    stdout
+      ..writeln()
+      ..writeln('=== ${setup.isEmpty ? 'default' : setup}')
+      ..writeln(_report(results, baseline))
+      ..writeln('Results: ${resultsFile.path}');
+
+    final problems = [
+      for (final (index, tour) in results.tours.indexed)
+        for (final problem in tour['problems']! as List<Object?>)
+          'Tour ${index + 1}: $problem',
+    ];
+    if (problems.isNotEmpty) {
+      stderr.writeln(
+        'Not valid, left out of the table:\n  ${problems.join('\n  ')}',
+      );
+      hasProblems = true;
+    }
+  }
+  if (hasProblems) {
     exitCode = 1;
     return;
   }
 
   if (options.flag('update-baseline')) {
+    final results = allResults.single;
     await baselineFile.writeAsString(results.prettyJson);
     stdout.writeln('Baseline updated: $_baselinePath');
   }

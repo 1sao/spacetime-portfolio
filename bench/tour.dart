@@ -1,5 +1,11 @@
-// The performance tour: the real app, at rest on the Landing. Built and
-// run by `tool/measure_performance.dart`.
+// The performance tour: the real app at rest, sharp and soft, on the
+// Landing and with the hole up close. Built and run by
+// `tool/measure_performance.dart`.
+//
+// The URL's query sets the tour: `settle` and `dwell` in seconds, and
+// `segments`, the names of the segments to measure, separated by commas
+// (all if it is left out). The app reads the rest of the query, such as
+// `lensing`.
 
 import 'dart:async';
 import 'dart:convert';
@@ -10,22 +16,47 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:homepage_v2/app.dart';
+import 'package:homepage_v2/scene/frame_loop.dart';
 import 'package:homepage_v2/scene/scene_running.dart';
 import 'package:homepage_v2/scene/scene_view.dart';
+import 'package:homepage_v2/space/camera.dart';
+import 'package:homepage_v2/space/direction_and_distance.dart';
+import 'package:vector_math/vector_math_64.dart';
 import 'package:web/web.dart' as web;
 
 import 'src/frame_recorder.dart';
 import 'src/frame_stats.dart';
 
-/// The frames to wait for after the shader's program loads. The shader
+/// The frames to wait for after the shader's assets load. The shader
 /// compiles on the GPU when it first draws.
 const _warmUpFrames = 30;
 
-/// The time after [_warmUpFrames] until the first measured frame.
-const _settle = Duration(seconds: 2);
+final _query = Uri.base.queryParameters;
 
-/// The time at rest on the Landing.
-const _dwell = Duration(seconds: 4);
+Duration _seconds(String name, double byDefault) => Duration(
+  milliseconds: ((double.tryParse(_query[name] ?? '') ?? byDefault) * 1000)
+      .round(),
+);
+
+/// The time after each change of the scene until the segment starts.
+final _settle = _seconds('settle', 1);
+
+/// The time that each segment measures.
+final _dwell = _seconds('dwell', 2);
+
+/// The segments to measure, or null for all of them.
+final Set<String>? _segments = _query['segments']?.split(',').toSet();
+
+/// The camera of the Credits section, with the hole in the middle of the
+/// screen: the scene at its most costly.
+final _holeUpClose = Camera(
+  target: Vector3.zero(),
+  fromTarget: const DirectionAndDistance(
+    azimuth: 0.55,
+    elevation: 0.13,
+    distance: 15,
+  ),
+);
 
 Future<void> main() async {
   final container = ProviderContainer();
@@ -91,10 +122,27 @@ class _Tour {
       if (!isRunning) _problems.add('The scene stopped during the tour.');
     }, fireImmediately: true);
 
-    await _container.read(sceneProgramProvider.future);
+    await _container.read(sceneAssetsProvider.future);
     await SchedulerBinding.instance.endOfFrames(_warmUpFrames);
+    await _measure('Landing');
+
+    final softness = _container.read(sceneSoftnessProvider);
+    softness.value = SceneSoftness.soft;
+    await _measure('Landing soft');
+
+    _container.read(sceneCameraProvider).value = _holeUpClose;
+    softness.value = SceneSoftness.sharp;
+    await _measure('Hole up close');
+    softness.value = SceneSoftness.soft;
+    await _measure('Hole up close soft');
+  }
+
+  /// Waits for the scene to settle, then measures it as [segment], if the
+  /// query asks for it.
+  Future<void> _measure(String segment) async {
+    if (!(_segments?.contains(segment) ?? true)) return;
     await Future<void>.delayed(_settle);
-    _recorder.startSegment('Landing');
+    _recorder.startSegment(segment);
     await Future<void>.delayed(_dwell);
     _recorder.stop();
   }

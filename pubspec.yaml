@@ -34,5 +34,8 @@ flutter:
   uses-material-design: true
   shaders:
     - shaders/scene.frag
+    - shaders/kepler_textures.frag
+    - shaders/hole_textures.frag
+    - shaders/sky_cache.frag
   assets:
     - LICENSES/

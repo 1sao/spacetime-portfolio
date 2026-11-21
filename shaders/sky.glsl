@@ -12,9 +12,9 @@
 
 // The sky: a nebula with stars, the same in every frame for a direction.
 //
-// scene.frag includes this file and calls sky(direction) for each ray that
-// hits no body. The sky depends on the direction only, so it turns with the
-// camera and does not change when the camera moves.
+// sky_cache.frag bakes it on a lattice of directions, which scene.frag reads
+// behind the bodies. The sky depends on the direction only, so it turns with
+// the camera and does not change when the camera moves.
 //
 // Star Nest takes samples of a fractal at points along the ray, and adds
 // their light. The fractal is bright where it is chaotic.
@@ -27,7 +27,7 @@
 // dm = darkness, v = light.
 
 // The number of lattice cells across each face of the cube around the
-// camera (see snapToLattice). scene_shader.dart sets it from the size of a
+// camera (see latticePlace). scene_shader.dart sets it from the size of a
 // pixel.
 uniform float uSkyCells;
 
@@ -77,29 +77,31 @@ vec3 starNest(vec3 origin, vec3 direction) {
     // tileSize, and abs 0 to tileSize.
     point = abs(vec3(tileSize) - mod(point, vec3(tileSize * 2.0)));
 
-    // The fractal: each iteration sends the point to
-    // abs(point) / |point|² - fractalOffset. totalJump adds how much the
-    // point's distance from the origin changes in each iteration. In
-    // chaotic parts of the fractal it jumps a lot, and the sample is
-    // bright.
+    // The fractal: each iteration sends the point to abs(point) / |point|²
+    // minus fractalOffset. totalJump adds how much the point's distance from
+    // the origin changes in each iteration. In chaotic parts of the fractal it
+    // jumps a lot, and the sample is bright.
     float previousLength = 0.0;
     float totalJump = 0.0;
     // |point|², kept from one iteration to the next, where it divides.
     float lengthSquared = dot(point, point);
     // The clamped iterations have their own loop, so no iteration tests
-    // its index. Such a test cost about 3.7 ms a frame at 2560x1600 on an
-    // Apple M3 Pro.
+    // its index. One inverse square root gives both 1 / |point|² and
+    // |point|.
+    float inverseLength = inversesqrt(lengthSquared);
     for (int i = 0; i < unclampedIterations; i++) {
-      point = abs(point) / lengthSquared - fractalOffset;
+      point = abs(point) * (inverseLength * inverseLength) - fractalOffset;
       lengthSquared = dot(point, point);
-      float pointLength = sqrt(lengthSquared);
+      inverseLength = inversesqrt(lengthSquared);
+      float pointLength = lengthSquared * inverseLength;
       totalJump += abs(pointLength - previousLength);
       previousLength = pointLength;
     }
     for (int i = unclampedIterations; i < fractalIterations; i++) {
-      point = abs(point) / lengthSquared - fractalOffset;
+      point = abs(point) * (inverseLength * inverseLength) - fractalOffset;
       lengthSquared = dot(point, point);
-      float pointLength = sqrt(lengthSquared);
+      inverseLength = inversesqrt(lengthSquared);
+      float pointLength = lengthSquared * inverseLength;
       totalJump += min(maxJump, abs(pointLength - previousLength));
       previousLength = pointLength;
     }
@@ -158,13 +160,13 @@ void faceBasis(int face, out vec3 normal, out vec3 across, out vec3 along) {
   }
 }
 
-// direction moved to the middle of its cell on a fixed lattice of
-// directions.
+// The lattice: a fixed set of directions that the sky is taken at.
 //
 // A star in the fractal can be smaller than a pixel. If each pixel took the
 // sky at its own direction, a small turn of the camera would make such a
-// star appear and disappear: it blinks. With the lattice, each pixel takes
-// one fixed sample, so as the view turns a star moves from pixel to pixel.
+// star appear and disappear: it blinks. sky_cache.frag takes the sky once
+// at each direction of the lattice, and scene.frag blends the nearest four,
+// so as the view turns a star moves from pixel to pixel.
 //
 // The lattice divides each face of the cube around the camera into
 // uSkyCells by uSkyCells cells. The cells are equal in angle, not in size
@@ -172,31 +174,34 @@ void faceBasis(int face, out vec3 normal, out vec3 across, out vec3 along) {
 // pi / (2 uSkyCells) rad. A cell narrower than a pixel can get no pixel,
 // and then its stars blink again, so scene_shader.dart makes the cells
 // wider than a pixel.
-vec3 snapToLattice(vec3 direction) {
-  // The face that direction goes through: the axis along which it goes
-  // furthest.
+
+// The face that direction goes through, and where on that face, in cells
+// from its corner: the middle of cell (i, j) is at (i + 0.5, j + 0.5).
+vec2 latticePlace(vec3 direction, out int face) {
+  // The face is the one on the axis along which direction goes furthest.
   vec3 size = abs(direction);
-  int face = size.x >= size.y && size.x >= size.z ? (direction.x > 0.0 ? 0 : 1)
+  face = size.x >= size.y && size.x >= size.z ? (direction.x > 0.0 ? 0 : 1)
     : size.y >= size.z ? (direction.y > 0.0 ? 2 : 3)
     : (direction.z > 0.0 ? 4 : 5);
   vec3 normal;
   vec3 across;
   vec3 along;
   faceBasis(face, normal, across, along);
-
   // The direction's two angles from the face's middle, each from -pi/4 to
-  // pi/4, moved to the middle of their cell.
+  // pi/4.
   vec2 angles = atan(
     vec2(dot(direction, across), dot(direction, along)) /
       dot(direction, normal)
   );
-  float cell = 1.5707963 / uSkyCells;
-  angles = (floor(angles / cell) + 0.5) * cell;
-  vec2 slopes = tan(angles);
-  return normalize(normal + slopes.x * across + slopes.y * along);
+  return angles / (1.5707963 / uSkyCells) + 0.5 * uSkyCells;
 }
 
-// The sky's colour in direction, which has length 1.
-vec3 sky(vec3 direction) {
-  return starNest(skyOrigin, snapToLattice(direction));
+// The direction through place on face (see latticePlace), of length 1.
+vec3 latticeDirection(int face, vec2 place) {
+  vec3 normal;
+  vec3 across;
+  vec3 along;
+  faceBasis(face, normal, across, along);
+  vec2 slopes = tan((place - 0.5 * uSkyCells) * (1.5707963 / uSkyCells));
+  return normalize(normal + slopes.x * across + slopes.y * along);
 }

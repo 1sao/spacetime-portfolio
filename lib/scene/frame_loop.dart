@@ -3,6 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
+import '../space/camera.dart';
 import '../space/frame_snapshot.dart';
 import '../space/system.dart';
 import 'scene_running.dart';
@@ -15,6 +16,7 @@ final frameSnapshotListenableProvider =
     Provider.autoDispose<ValueListenable<FrameSnapshot>>((ref) {
       final content = ref.watch(contentProvider);
       final bodies = ref.watch(bodiesProvider);
+      final camera = ref.watch(sceneCameraProvider);
       // The page order gives each body its slot in the shader.
       final bodiesInPageOrder = [
         for (final section in content) ?bodies[section.id],
@@ -25,7 +27,7 @@ final frameSnapshotListenableProvider =
         actualTime: actualTime,
         orbitTime: 0,
         spinTime: 0,
-        camera: landingCamera,
+        camera: camera.value,
       );
 
       final currentFrame = ValueNotifier(frameAt(0));
@@ -51,6 +53,14 @@ final frameSnapshotListenableProvider =
       });
       return currentFrame;
     });
+
+/// The camera the scene is seen from, which the frame loop reads every
+/// frame.
+final sceneCameraProvider = Provider<ValueNotifier<Camera>>((ref) {
+  final camera = ValueNotifier(landingCamera);
+  ref.onDispose(camera.dispose);
+  return camera;
+});
 
 extension _FractionalSeconds on Duration {
   double get inFractionalSeconds =>

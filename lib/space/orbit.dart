@@ -39,6 +39,7 @@ class Orbit {
     final normal = flattestNormal.turnedAbout(outward, tilt);
     return Orbit._(
       start: start.clone(),
+      normal: normal,
       // At right angles to the normal and to [start], and as long as
       // [start], because the normal has length 1.
       quarterTurn: normal.cross(start),
@@ -51,12 +52,17 @@ class Orbit {
 
   const Orbit._({
     required this.start,
+    required this.normal,
     required this._quarterTurn,
     required this.angularSpeed,
   });
 
   /// The position at orbit time 0, in world units.
   final Vector3 start;
+
+  /// The direction at right angles to the orbit's plane, of length 1. Seen
+  /// from its tip, the body goes round counterclockwise.
+  final Vector3 normal;
 
   /// The position a quarter turn after [start], in world units.
   final Vector3 _quarterTurn;

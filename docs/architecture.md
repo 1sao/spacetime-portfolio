@@ -20,17 +20,26 @@ Credits, which frames the hole.
   never does.
 
 This document describes the design that the code is built toward. Today the
-scene shows the Landing with flat placeholder bodies, the clocks stand at 0,
-and the page is plain text: scroll, drag, titles and URL fragments do not
-yet move anything.
+scene shows the Landing with the planets and the hole, the clocks stand at
+0, and the page is plain text: scroll, drag, titles and URL fragments do
+not yet move anything.
 
 ## Rendering
 
 - **One shader draws everything:** the sky, the hole, its disc and the
   bodies, in a single ray march, so the hole lenses and eclipses the bodies.
-  The bending shows only near the hole.
-  Separate layers cost more than twice as much, and on the web a layer
-  cannot read what is under it.
+  The bending shows only near the hole. Inside a sphere round it, a ray
+  follows a path baked once at load into a table, by how far from the hole
+  the ray would pass. The shader looks for bodies along that path too, but
+  only for bodies that come into the sphere. The hole pulls a ray only
+  toward itself, so the path stays flat: in the plane through the hole
+  and the straight ray. A body far from that plane can't be on the path,
+  and the shader skips it. Separate layers cost more than twice as much,
+  and on the web a layer cannot read what is under it.
+- **The sky is baked:** it is the most costly part to work out, and it
+  depends only on the direction. So it is taken once at a fixed set of
+  directions, as many as the screen's pixels need, and the shader reads it
+  from that image.
 - **Overlays are Flutter widgets,** such as the body titles and their
   leaders, placed by the CPU projection. It does not bend rays: the design
   keeps the bodies that have titles out of the region where the hole's
@@ -59,7 +68,8 @@ lib/
                providers for content/ and space/
   third_party_licences.dart
                adds the licences in LICENSES/ to Flutter's licence page
-shaders/       scene.frag and its includes
+shaders/       scene.frag and its includes, and the shaders that bake
+               its textures
 LICENSES/      the licence texts of works by other authors, one file each,
                whose first line is the name of the work
 bench/, tool/  the performance tour and its driver
@@ -152,3 +162,13 @@ The site uses these works by other authors. Each one's licence text is in
   Beibei Wang and Huw Bowles: the sky.
   <https://www.shadertoy.com/view/XlfGRj> and
   <https://www.shadertoy.com/view/XllGzN>, MIT.
+- **Planet Shader** by mrange: the banded and ringed planets.
+  <https://www.shadertoy.com/view/3d2fDw>, CC0.
+- **Kepler 256o** by otaviogood: the planets with land and oceans.
+  <https://www.shadertoy.com/view/XsjGRd>, CC0.
+- **Hash without Sine** by Dave Hoskins: the noise in the planets'
+  textures. <https://www.shadertoy.com/view/4djSRW>, MIT.
+- **Black Hole** by nethe550: the hole, its disc and its jets.
+  <https://www.shadertoy.com/view/tXsGR2>, MIT.
+- **webgl-noise** by Ian McEwan (Ashima Arts): the noise in the disc's
+  pattern. <https://github.com/ashima/webgl-noise>, MIT.

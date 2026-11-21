@@ -30,7 +30,11 @@ int? pickBody(FrameSnapshot frame, Vector2 pixel, Screen screen) {
     var nearest = holeEntry;
     int? picked;
     for (final (i, body) in frame.bodies.indexed) {
-      final entry = _entryDistance(camera.position, direction, sphereOf(body));
+      final entry = _entryDistance(
+        camera.position,
+        direction,
+        sphereOf(body.sphere),
+      );
       if (entry != null && (nearest == null || entry < nearest)) {
         nearest = entry;
         picked = i;
@@ -45,7 +49,7 @@ int? pickBody(FrameSnapshot frame, Vector2 pixel, Screen screen) {
         // units. It is negative for a body behind the camera, so the body
         // keeps its own radius.
         final depth = (body.center - camera.position).dot(camera.forward);
-        final minRadius = minPickRadius * depth / screen.focal;
+        final minRadius = minPickRadius * depth / screen.focalLength;
         return Sphere.centerRadius(
           body.center,
           math.max(body.radius, minRadius),

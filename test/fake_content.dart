@@ -28,6 +28,8 @@ final fakeBodies = {
   SectionId.work: Body(
     orbit: Orbit(start: Vector3(6, 0, 0), tilt: 0),
     radius: 0.5,
+    spinRate: 1,
+    obliquity: 0.2,
   ),
 };
 

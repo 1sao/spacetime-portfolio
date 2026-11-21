@@ -1,0 +1,5 @@
+Planet Shader
+https://www.shadertoy.com/view/3d2fDw
+
+By mrange. Dedicated to the public domain under CC0 1.0 Universal:
+https://creativecommons.org/publicdomain/zero/1.0/
