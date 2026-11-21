@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:web_address_bar/web_address_bar.dart';
 
 import 'app.dart';
 import 'third_party_licences.dart';
@@ -8,6 +9,8 @@ import 'third_party_licences.dart';
 void main() {
   setUrlStrategy(_CollapsingPathUrlStrategy());
   addThirdPartyLicences();
+  // Lets a phone's browser hide its address bar as the page scrolls.
+  WebAddressBar.enable();
   runApp(const ProviderScope(child: App()));
 }
 

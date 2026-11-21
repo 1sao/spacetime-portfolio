@@ -5,8 +5,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.13.5
-  flutter: '>=3.47.0'
+  sdk: ^3.14.0
+  flutter: '>=3.50.0'
 
 dependencies:
   flutter:
@@ -18,6 +18,8 @@ dependencies:
   material_ui: ^1.10.0
   riverpod: ^3.4.3
   vector_math: ^2.4.0
+  web: ^1.1.2
+  web_address_bar: ^0.1.2
 
 dev_dependencies:
   flutter_test:
@@ -28,7 +30,6 @@ dev_dependencies:
   puppeteer: ^3.28.0
   shelf: ^1.4.3
   shelf_static: ^1.2.0
-  web: ^1.1.2
 
 flutter:
   uses-material-design: true

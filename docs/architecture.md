@@ -6,7 +6,7 @@ A portfolio as one scrolling page over a live star system. A black hole sits
 at the origin, and each section has a body that orbits it, except the last,
 Credits, which frames the hole.
 
-- The scene fills the window and stays fixed. The page scrolls over it.
+- The scene fills the screen and stays fixed. The page scrolls over it.
 - The page has two parts. The Landing, the first screen, shows the whole
   system. Below it, the reading screen, a panel that scrolls over the
   scene, has the text of every section. While the visitor reads a section,
@@ -62,6 +62,8 @@ lib/
   scene/       the frame loop, the shader wrapper with its typed uniform
                layout, the looks
   ui/          the page: the Landing, the reading screen, the colours
+  viewport/    the window's height with the address bar shown and hidden,
+               measured in the browser
   debug/       debug tools, kept apart from the rest
   router.dart  the routes
   providers.dart
@@ -115,6 +117,12 @@ can use them.
   offset, directly at each tick.
 - **The scene stands still** while the app is not resumed: on the web,
   while the window has no focus or the tab is hidden.
+- **The address bar hides on phones.** `web_address_bar` lets a phone's
+  browser hide its address bar as the page scrolls, so the window's height
+  changes during a scroll. The scene is as tall as the window with the bar
+  hidden (CSS `lvh`), and the page's layout, such as the Landing's height,
+  uses the window's height with the bar shown (`svh`). Neither changes
+  when the bar moves, so the layout does not jump during a scroll.
 - **Vectors:** `vector_math_64`. Azimuth 0 points along +z, and the
   camera's right is forward × world up.
 

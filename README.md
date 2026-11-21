@@ -6,7 +6,7 @@ A portfolio as one scrolling page over a live star system, built with Flutter fo
 
 ## Running it
 
-Needs Flutter 3.47 or later.
+Needs Flutter 3.50 or later.
 
 ```sh
 flutter run -d chrome                  # serve the site locally and open it in Chrome
