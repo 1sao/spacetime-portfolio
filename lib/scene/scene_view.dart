@@ -55,22 +55,12 @@ final sceneShaderProvider = Provider.autoDispose<AsyncValue<SceneShader>>((
   ref,
 ) {
   final looks = ref.watch(looksProvider);
-  final content = ref.watch(contentProvider);
-  final bodies = ref.watch(bodiesProvider);
-  // In page order, as the frame loop orders the bodies.
-  assert(
-    bodies.keys.every(looks.bodies.containsKey),
-    'Every body needs a look.',
-  );
-  final bodyLooks = [
-    for (final section in content)
-      if (bodies.containsKey(section.id)) looks.bodies[section.id]!,
-  ];
+  final bodies = ref.watch(bodiesInPageOrderProvider);
   return ref.watch(sceneAssetsProvider).whenData((assets) {
     final shader = SceneShader(
       assets.program,
       looks,
-      bodies: bodyLooks,
+      bodies: [for (final body in bodies) body.look],
       keplerTextures: assets.keplerTextures,
       holeTextures: assets.holeTextures,
       skyCache: assets.skyCache,
@@ -224,8 +214,8 @@ class _ScenePainter extends CustomPainter {
     );
     shader.set(
       frame,
-      pixelRatio: pixelRatio,
       skyFocalLength: skyFocalLength,
+      pixelRatio: pixelRatio,
       scale: scale,
       border: border,
     );

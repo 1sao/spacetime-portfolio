@@ -3,7 +3,7 @@ import 'package:web/web.dart' as web;
 /// The browser's small and large viewport heights, in logical pixels: the
 /// heights of two hidden elements, `100svh` and `100lvh` tall. A logical
 /// pixel of Flutter on the web is a CSS pixel.
-({double small, double large}) measureBrowserViewport() => (
+({double small, double large}) measureBrowserViewportHeights() => (
   small: _small.getBoundingClientRect().height,
   large: _large.getBoundingClientRect().height,
 );

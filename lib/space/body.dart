@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
+import 'body_look.dart';
 import 'orbit.dart';
 
 /// A sphere that orbits the hole and turns on its axis: the body of a
@@ -12,6 +13,7 @@ class Body {
     required this.radius,
     required this.spinRate,
     required this.obliquity,
+    required this.look,
   }) : spinAxis = _spinAxis(orbit, obliquity);
 
   /// The circle the body's centre moves along.
@@ -27,9 +29,16 @@ class Body {
   /// the way the body moves at orbit time 0.
   final double obliquity;
 
+  /// How the body is drawn.
+  final BodyLook look;
+
   /// The axis the body turns about, of length 1. Seen from its tip, the
   /// body turns counterclockwise.
   final Vector3 spinAxis;
+
+  /// How far from its centre the body is drawn, in world units, rings
+  /// included.
+  double get reach => radius * look.reachInRadii;
 
   static Vector3 _spinAxis(Orbit orbit, double obliquity) {
     final heading = orbit.normal.cross(orbit.start).normalized();
@@ -43,6 +52,7 @@ class Body {
   BodyPose poseAt({required double orbitTime, required double spinTime}) =>
       BodyPose(
         sphere: Sphere.centerRadius(positionAt(orbitTime), radius),
+        reach: reach,
         spinAxis: spinAxis,
         spinAngle: spinRate * spinTime,
       );
@@ -52,12 +62,17 @@ class Body {
 class BodyPose {
   const BodyPose({
     required this.sphere,
+    required this.reach,
     required this.spinAxis,
     required this.spinAngle,
   });
 
   /// The body's centre and radius, in world units.
   final Sphere sphere;
+
+  /// How far from its centre the body is drawn, in world units (see
+  /// [Body.reach]).
+  final double reach;
 
   /// The axis the body turns about, of length 1 (see [Body.spinAxis]).
   final Vector3 spinAxis;

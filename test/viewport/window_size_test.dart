@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:homepage_v2/viewport/window_size.dart';
 
 void main() {
-  testWidgets('without the address bar package, the size follows the '
-      'window, and both heights are its height', (tester) async {
+  testWidgets('when the address bar is static, WindowSize matches the '
+      'window size in logical pixels', (tester) async {
     addTearDown(tester.view.reset);
     tester.view.devicePixelRatio = 2;
     tester.view.physicalSize = const Size(800, 1200);

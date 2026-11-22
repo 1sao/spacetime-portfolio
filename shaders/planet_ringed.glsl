@@ -7,7 +7,7 @@
 // written out, because Flutter's web shaders do not have it.
 
 // A banded planet with rings, for scene.frag. RingedLook in
-// lib/scene/looks.dart holds the look's values.
+// lib/space/body_look.dart holds the look's values.
 //
 // The planet's space: the planet's centre is at 0, its radius is
 // ringedRadius, and y is its axis. The rings are in the plane y = 0.

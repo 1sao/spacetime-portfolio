@@ -64,7 +64,7 @@ class WindowSizeNotifier extends Notifier<WindowSize>
     // Without WebAddressBar the address bar does not hide.
     var (small, large) = (size.height, size.height);
     if (WebAddressBar.isActive) {
-      final measured = measureBrowserViewport();
+      final measured = measureBrowserViewportHeights();
       // A browser without `svh` and `lvh` measures 0 for both.
       if (measured.small > 0 && measured.large > 0) {
         (small, large) = (measured.small, measured.large);

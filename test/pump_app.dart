@@ -7,9 +7,8 @@ import 'package:riverpod/misc.dart' show Override;
 import 'fake_content.dart';
 
 /// Starts the app with the fake content at [firstUrl], as a visit that
-/// opens that URL. [overrides] replace more providers. The page never
-/// settles, because the scene ticks every frame, so tests pump fixed
-/// durations.
+/// opens that URL. The page never settles, because the scene ticks every
+/// frame, so tests pump fixed durations.
 Future<void> pumpApp(
   WidgetTester tester, {
   String firstUrl = '/',

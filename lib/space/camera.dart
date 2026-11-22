@@ -92,10 +92,8 @@ class Camera {
 
   /// The direction to the right of the view, of length 1.
   ///
-  /// With [roll] 0 it is [forward] × world y, which keeps it level; [roll]
-  /// turns it about [forward]. A
-  /// camera on the +z axis looking at the origin, seen from just behind
-  /// it:
+  /// A camera on the +z axis looking at the origin, with no roll, seen
+  /// from just behind it:
   ///
   /// ```text
   ///            +y  world up
@@ -108,9 +106,8 @@ class Camera {
   /// ```
   final Vector3 right;
 
-  /// The direction to the top of the view, of length 1. With [roll] 0 it
-  /// is world y, tilted with [forward] so the two stay at right angles;
-  /// [roll] turns it about [forward].
+  /// The direction to the top of the view, of length 1, at right angles
+  /// to [forward] and [right].
   final Vector3 up;
 
   /// The direction of the ray from the camera through [pixel] of [screen],

@@ -65,10 +65,11 @@ not yet move anything.
 ```
 lib/
   content/     sections and their entries: data only
-  space/       pure Dart: the system (orbits, bodies), the camera,
-               projection, pick, the per-frame snapshot
+  space/       pure Dart: the system (orbits, bodies and their looks), the
+               camera, projection, pick, the per-frame snapshot
   scene/       the frame loop, the framing for the screen's size, the
-               shader wrapper with its typed uniform layout, the looks
+               shader wrapper with its typed uniform layout, the look of
+               the hole and its light
   ui/          the page: the Landing, the reading screen, the colours
   viewport/    the window's width, and its height with the address bar
                shown and hidden, measured in the browser

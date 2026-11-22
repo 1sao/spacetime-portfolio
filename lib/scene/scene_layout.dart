@@ -54,19 +54,17 @@ class SceneLayout {
   /// The Landing camera's roll: a quarter turn makes the line a column.
   double get landingRoll => isColumn ? math.pi / 2 : 0;
 
-  /// The Landing's focal length, in logical pixels. The column spans about
-  /// 45 % of the height, up to a limit set by the width.
+  /// The Landing's focal length, in logical pixels.
   double get landingFocalLength => isColumn
       ? math.min(screen.height * 0.56, screen.width * 1.6)
-      : sectionFocalLength;
+      : defaultFocalLength;
 
-  /// The focal length in the sections and on the row Landing, in logical
-  /// pixels: the row then spans 84 % of the width (80 % of a compact
-  /// width), up to a limit set by the height.
-  double get sectionFocalLength {
-    final span = isColumn ? 0.8 : 0.84;
+  /// The focal length of the sections, and of the Landing when it is a
+  /// row, in logical pixels.
+  double get defaultFocalLength {
+    final lineFractionOfWidth = isColumn ? 0.8 : 0.84;
     return math.min(
-      screen.width * span / _lineLengthPerFocalLength,
+      screen.width * lineFractionOfWidth / _lineLengthPerFocalLength,
       screen.height * 1.9,
     );
   }
@@ -74,7 +72,7 @@ class SceneLayout {
   /// The focal length that the sky's lattice is made for: the shortest of
   /// this layout's, so that every cell gets a pixel in every framing, and
   /// the sky is not baked again when the camera moves between them.
-  double get skyFocalLength => math.min(landingFocalLength, sectionFocalLength);
+  double get skyFocalLength => math.min(landingFocalLength, defaultFocalLength);
 }
 
 /// How long the line of the bodies' start points is on the screen, as seen

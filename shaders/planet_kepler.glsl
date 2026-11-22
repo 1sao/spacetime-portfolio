@@ -9,8 +9,8 @@
 // planet can be seen from every side, and they are procedural
 // (kepler_textures.frag).
 
-// An Earth-like planet, for scene.frag. KeplerLook in lib/scene/looks.dart
-// holds the look's values.
+// An Earth-like planet, for scene.frag. KeplerLook in
+// lib/space/body_look.dart holds the look's values.
 //
 // The planet's space: the planet's centre is at 0, its radius is 1, and y
 // is its axis.

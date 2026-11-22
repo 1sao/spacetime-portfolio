@@ -10,9 +10,11 @@ import 'package:homepage_v2/scene/scene_shader.dart';
 import 'package:homepage_v2/scene/scene_view.dart';
 import 'package:homepage_v2/scene/sky_cache.dart';
 import 'package:homepage_v2/space/body.dart';
+import 'package:homepage_v2/space/body_look.dart';
 import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/direction_and_distance.dart';
 import 'package:homepage_v2/space/frame_snapshot.dart';
+import 'package:homepage_v2/space/rgb.dart';
 import 'package:homepage_v2/space/system.dart';
 import 'package:vector_math/vector_math_64.dart' show Sphere, Vector2, Vector3;
 
@@ -26,10 +28,7 @@ void main() {
     Color(0xFFFF00FF),
   ];
   const looks = Looks(
-    light: Rgb.grey(1),
-    ambient: Rgb.grey(0),
-    rim: 0,
-    bodies: {},
+    lighting: Lighting(direct: Rgb.grey(1), ambient: Rgb.grey(0), rim: 0),
   );
   // Large, and well off the view axis, so some discs are centred pixels
   // away from where their spheres' centres project (see _discCentre).
@@ -93,7 +92,7 @@ void main() {
     final shader = SceneShader(
       program,
       looks,
-      bodies: [for (final colour in bodyColours) FlatLook(colour)],
+      bodies: [for (final colour in bodyColours) FlatLook(colour.rgb)],
       keplerTextures: keplerTextures,
       holeTextures: holeTextures,
       skyCache: skyCache,
@@ -163,14 +162,19 @@ FrameSnapshot _frame(Camera camera, List<Sphere> bodies) => FrameSnapshot(
   camera: camera,
   bodies: [
     for (final sphere in bodies)
-      BodyPose(sphere: sphere, spinAxis: Vector3(0, 1, 0), spinAngle: 0),
+      BodyPose(
+        sphere: sphere,
+        reach: sphere.radius,
+        spinAxis: Vector3(0, 1, 0),
+        spinAngle: 0,
+      ),
   ],
 );
 
 Future<ByteData> _render(SceneShader shader, FrameSnapshot frame) async {
   final screen = frame.screen;
   // The sky is off, so the pixel ratio does not change the picture.
-  shader.set(frame, pixelRatio: 1, skyFocalLength: frame.camera.focalLength);
+  shader.set(frame, skyFocalLength: frame.camera.focalLength, pixelRatio: 1);
   final recorder = PictureRecorder();
   Canvas(recorder).drawRect(
     Rect.fromLTWH(0, 0, screen.width, screen.height),
@@ -257,4 +261,8 @@ extension on Camera {
     final bend = entry(Vector3.zero(), holeLensingRadius);
     return hit != null && (bend == null || hit < bend);
   }
+}
+
+extension on Color {
+  Rgb get rgb => Rgb(r, g, b);
 }

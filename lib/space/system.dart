@@ -3,6 +3,7 @@ import 'package:vector_math/vector_math_64.dart';
 import '../content/content.dart';
 
 import 'body.dart';
+import 'body_look.dart';
 import 'camera.dart';
 import 'direction_and_distance.dart';
 import 'orbit.dart';
@@ -42,6 +43,7 @@ final Map<SectionId, Body> bodies = {
     tilt: 0.22,
     spinRate: 0.9,
     obliquity: 0.4,
+    look: KeplerLook.desert,
   ),
   SectionId.work: _body(
     across: -5.2,
@@ -50,6 +52,7 @@ final Map<SectionId, Body> bodies = {
     tilt: -0.16,
     spinRate: 1.5,
     obliquity: 0.12,
+    look: RingedLook.gasGiant,
   ),
   SectionId.personal: _body(
     across: 5.3,
@@ -58,6 +61,7 @@ final Map<SectionId, Body> bodies = {
     tilt: 0.34,
     spinRate: 1.1,
     obliquity: 0.45,
+    look: RingedLook.amber,
   ),
   SectionId.contact: _body(
     across: 13.5,
@@ -66,6 +70,7 @@ final Map<SectionId, Body> bodies = {
     tilt: -0.28,
     spinRate: 0.7,
     obliquity: 0.25,
+    look: KeplerLook.ice,
   ),
 };
 
@@ -82,7 +87,8 @@ final Map<SectionId, Body> bodies = {
 /// - [tilt]: turns the orbit's plane about the line from the hole to the
 ///   start point, in rad, so the body leaves its start point upward or
 ///   downward.
-/// - [spinRate] and [obliquity]: as [Body.spinRate] and [Body.obliquity].
+/// - [spinRate], [obliquity] and [look]: as [Body.spinRate],
+///   [Body.obliquity] and [Body.look].
 Body _body({
   required double across,
   required double toward,
@@ -90,6 +96,7 @@ Body _body({
   required double tilt,
   required double spinRate,
   required double obliquity,
+  required BodyLook look,
 }) {
   final towardCamera = lineUpViewpoint.toVector3().normalized();
   return Body(
@@ -100,5 +107,6 @@ Body _body({
     radius: radius,
     spinRate: spinRate,
     obliquity: obliquity,
+    look: look,
   );
 }

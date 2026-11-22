@@ -46,11 +46,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1280, 800);
     await pumpApp(tester);
-    final binding = tester.binding;
-    binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    addTearDown(
-      () => binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed),
-    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     FrameSnapshot currentFrame() =>
         tester.container().read(frameSnapshotListenableProvider).value;
     expect(currentFrame().camera.roll, 0);

@@ -15,12 +15,7 @@ import 'scene_running.dart';
 /// bodies, so a painter should listen to the listenable.
 final frameSnapshotListenableProvider =
     Provider.autoDispose<ValueListenable<FrameSnapshot>>((ref) {
-      final content = ref.watch(contentProvider);
-      final bodies = ref.watch(bodiesProvider);
-      // The page order gives each body its slot in the shader.
-      final bodiesInPageOrder = [
-        for (final section in content) ?bodies[section.id],
-      ];
+      final bodiesInPageOrder = ref.watch(bodiesInPageOrderProvider);
       var layout = ref.read(sceneLayoutProvider);
 
       FrameSnapshot frameAt(double actualTime) => FrameSnapshot.of(

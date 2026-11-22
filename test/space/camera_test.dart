@@ -41,8 +41,8 @@ void main() {
     }
   });
 
-  test('the ray through the pixel where a point lands passes through the '
-      'point, at any roll, for a camera aimed off the middle', () {
+  test('rayThrough points back at where project puts a point, at any roll '
+      'and screen point', () {
     const screen = Screen(width: 400, height: 250);
     final points = [Vector3(3, 1, -2), Vector3(-6, 4, 1), Vector3(2, -5, 5)];
     for (final roll in [0.0, 0.6, math.pi / 2, -2.0]) {
@@ -62,7 +62,7 @@ void main() {
     }
   });
 
-  test('a quarter turn of roll shows what is left of the target above it', () {
+  test('a roll of π/2 moves a point left of the target to above it', () {
     const screen = Screen(width: 400, height: 400);
     Camera cameraWith({required double roll}) => Camera(
       target: Vector3.zero(),

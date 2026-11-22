@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import '../space/body.dart';
+import '../space/body_look.dart';
 import '../space/frame_snapshot.dart';
+import '../space/rgb.dart';
 import '../space/system.dart';
 import 'checked_uniforms.dart';
 import 'hole_textures.dart';
@@ -64,7 +66,7 @@ class SceneShader {
        _scale = fragmentShader.getSingleUniformFloat('uScale'),
        _border = fragmentShader.getSingleUniformFloat('uBorder'),
        _focalLength = fragmentShader.getSingleUniformFloat('uFocalLength'),
-       _skyCellsUniform = fragmentShader.getSingleUniformFloat('uSkyCells'),
+       _skyCells = fragmentShader.getSingleUniformFloat('uSkyCells'),
        _camera = fragmentShader.getUniformVec3('uCamera'),
        _forward = fragmentShader.getUniformVec3('uForward'),
        _right = fragmentShader.getUniformVec3('uRight'),
@@ -95,9 +97,7 @@ class SceneShader {
     fragmentShader.getSingleUniformFloat('uLensingRadius').set(lensingRadius);
     fragmentShader.getSingleUniformFloat('uDiscOuter').set(holeDiscOuterRadius);
     fragmentShader.setHoleLook(looks.hole);
-    fragmentShader.getUniformVec3('uLight').setRgb(looks.light);
-    fragmentShader.getUniformVec3('uAmbient').setRgb(looks.ambient);
-    fragmentShader.getSingleUniformFloat('uRim').set(looks.rim);
+    fragmentShader.setLighting(looks.lighting);
     for (final (i, look) in _looks.indexed) {
       _lookBlocks[i].setLook(look);
     }
@@ -141,7 +141,7 @@ class SceneShader {
   final UniformFloatSlot _scale;
   final UniformFloatSlot _border;
   final UniformFloatSlot _focalLength;
-  final UniformFloatSlot _skyCellsUniform;
+  final UniformFloatSlot _skyCells;
   final UniformVec3Slot _camera;
   final UniformVec3Slot _forward;
   final UniformVec3Slot _right;
@@ -168,16 +168,16 @@ class SceneShader {
   }
 
   /// Sets the uniforms that change from frame to frame, all from [frame]:
-  /// the camera, the bodies and the screen. The screen has [pixelRatio]
-  /// device pixels for each logical pixel. The sky's lattice is made for
-  /// [skyFocalLength] (see `SceneLayout.skyFocalLength`).
+  /// the camera, the bodies and the screen. The sky's lattice is made for
+  /// [skyFocalLength] (see `SceneLayout.skyFocalLength`). The screen has
+  /// [pixelRatio] device pixels for each logical pixel.
   ///
   /// For a soft scene (see `SceneSoftness`), the shader draws the screen at
   /// [scale] times its size, with [border] more of its pixels on each side.
   void set(
     FrameSnapshot frame, {
-    required double pixelRatio,
     required double skyFocalLength,
+    required double pixelRatio,
     double scale = 1,
     double border = 0,
   }) {
@@ -193,8 +193,8 @@ class SceneShader {
     _focalLength.set(camera.focalLength);
     // The sharp scene's lattice, so the sky stays the same when the scene
     // turns soft.
-    final skyCells = _skyCells(skyFocalLength, pixelRatio);
-    _skyCellsUniform.set(skyCells);
+    final skyCells = _calculateSkyCells(skyFocalLength, pixelRatio);
+    _skyCells.set(skyCells);
     final skyImage = _skyCache.imageFor(skyCells);
     final isNewSky = skyImage != _skyImage;
     _skyImage = skyImage;
@@ -221,8 +221,7 @@ class SceneShader {
     }
     double reachIfInLensingRadius(int i) {
       if (i >= bodies.length) return 0;
-      final sphere = bodies[i].sphere;
-      final reach = sphere.radius * _looks[i].reach;
+      final BodyPose(:sphere, :reach) = bodies[i];
       return sphere.isInLensingRadius(reach) ? reach : 0;
     }
 
@@ -247,6 +246,12 @@ extension on Sphere {
 }
 
 extension on FragmentShader {
+  void setLighting(Lighting lighting) {
+    getUniformVec3('uLight').setRgb(lighting.direct);
+    getUniformVec3('uAmbient').setRgb(lighting.ambient);
+    getSingleUniformFloat('uRim').set(lighting.rim);
+  }
+
   void setHoleLook(HoleLook look) {
     getSingleUniformFloat('uPull').set(look.pull);
     getUniformVec3('uDiscInnerColour').setRgb(look.discInnerColour);
@@ -284,7 +289,7 @@ extension on FragmentShader {
 ///
 /// On a very large screen, N stops at [_maxSkyCells], and the cells are
 /// wider than a pixel.
-double _skyCells(double focalLength, double pixelRatio) {
+double _calculateSkyCells(double focalLength, double pixelRatio) {
   final cells = _skyCellsPerPixel * math.pi / 2 * focalLength * pixelRatio;
   return (math.max(1, (cells / 32).round()) * 32.0).clamp(32, _maxSkyCells);
 }
@@ -332,7 +337,7 @@ extension on BodyLook {
 extension _LookBlock on UniformArray<UniformVec4Slot> {
   void setLook(BodyLook look) {
     final values = switch (look) {
-      FlatLook(:final colour) => [(colour.r, colour.g, colour.b, 0.0)],
+      FlatLook(:final colour) => [colour.withW(0)],
       RingedLook() => [
         look.base.withW(look.ringOpacity),
         look.wideBand.withW(0),
