@@ -5,6 +5,7 @@ import '../providers.dart';
 import 'colours.dart';
 import 'corners.dart';
 import 'spacing.dart';
+import 'type.dart';
 
 /// Every section and entry as text, on one panel.
 class ReadingScreen extends ConsumerWidget {
@@ -13,7 +14,7 @@ class ReadingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final content = ref.watch(contentProvider);
-    final type = Theme.of(context).textTheme;
+    final type = ref.watch(siteTypeProvider);
 
     return Align(
       alignment: Alignment.topLeft,
@@ -40,7 +41,7 @@ class ReadingScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: SiteSpacing.headingGap,
                 children: [
-                  _Heading(section.title, level: 2, style: type.headlineMedium),
+                  _Heading(section.title, level: 2, style: type.sectionHeading),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: SiteSpacing.entryGap,
@@ -53,9 +54,9 @@ class ReadingScreen extends ConsumerWidget {
                             _Heading(
                               entry.title,
                               level: 3,
-                              style: type.titleLarge,
+                              style: type.entryHeading,
                             ),
-                            Text(entry.text, style: type.bodyLarge),
+                            Text(entry.text, style: type.body),
                           ],
                         ),
                     ],

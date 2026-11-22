@@ -70,9 +70,11 @@ lib/
   scene/       the frame loop, the framing for the screen's size, the
                shader wrapper with its typed uniform layout, the look of
                the hole and its light
-  ui/          the page: the Landing, the reading screen, the colours
-  viewport/    the window's width, and its height with the address bar
-               shown and hidden, measured in the browser
+  ui/          the page: the Landing, the reading screen, the colours and
+               the type
+  viewport/    the window's width and its width class, and its height
+               with the address bar shown and hidden, measured in the
+               browser
   debug/       debug tools, kept apart from the rest
   router.dart  the routes
   providers.dart
@@ -81,6 +83,7 @@ lib/
                adds the licences in LICENSES/ to Flutter's licence page
 shaders/       scene.frag and its includes, and the shaders that bake
                its textures
+fonts/         the two bundled fonts
 LICENSES/      the licence texts of works by other authors, one file each,
                whose first line is the name of the work
 bench/, tool/  the performance tour and its driver
@@ -130,6 +133,14 @@ can use them.
   page's thread.
 - **Widgets:** `package:material_ui`, not the SDK's `flutter/material.dart`.
   go_router 18 is built on it.
+- **Fonts:** Saira and Atkinson Hyperlegible Next are bundled, and Flutter
+  web loads them before the first frame. No font comes from another host.
+  Flutter web downloads the fonts that it does not have from
+  `fontFallbackBaseUrl`: Roboto, which it uses for text whose family is
+  missing, and a font for each glyph that no bundled font has.
+  `web/flutter_bootstrap.js` points that address to a path on this site
+  that has no fonts, so such a glyph shows as a box. `pubspec.yaml` also
+  names Atkinson `Roboto`, so Flutter does not look for Roboto.
 - **State:** Riverpod 3, without code generation. Content, the router and
   settings such as the bodies are providers, so tests override them.
 - **Per-frame values are not Riverpod state.** A provider owns the ticker
@@ -202,3 +213,8 @@ The site uses these works by other authors. Each one's licence text is in
   <https://www.shadertoy.com/view/tXsGR2>, MIT.
 - **webgl-noise** by Ian McEwan (Ashima Arts): the noise in the disc's
   pattern. <https://github.com/ashima/webgl-noise>, MIT.
+- **Saira** by the Saira Project Authors (Omnibus-Type): names and
+  labels. <https://github.com/Omnibus-Type/Saira>, SIL OFL 1.1.
+- **Atkinson Hyperlegible Next** by the Atkinson Hyperlegible Next
+  Project Authors: reading text.
+  <https://github.com/googlefonts/atkinson-hyperlegible-next>, SIL OFL 1.1.

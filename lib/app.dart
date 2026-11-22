@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'router.dart';
 import 'ui/colours.dart';
+import 'ui/type.dart';
 
 /// The root widget. Expects a `ProviderScope` above it.
 class App extends ConsumerWidget {
@@ -25,6 +26,7 @@ class App extends ConsumerWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: background,
         textTheme: ThemeData(brightness: Brightness.dark).textTheme.apply(
+          fontFamily: SiteFonts.atkinson,
           bodyColor: SiteColours.readingCream,
           displayColor: SiteColours.lampWhite,
         ),

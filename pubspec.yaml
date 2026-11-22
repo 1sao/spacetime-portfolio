@@ -40,3 +40,16 @@ flutter:
     - shaders/sky_cache.frag
   assets:
     - LICENSES/
+  fonts:
+    - family: Saira
+      fonts:
+        - asset: fonts/Saira.ttf
+    - family: Atkinson Hyperlegible Next
+      fonts:
+        - asset: fonts/AtkinsonHyperlegibleNext.ttf
+    # Flutter web draws text in Roboto when the text's own family is
+    # missing, and downloads Roboto at start-up unless a family has that
+    # name. This one is Atkinson's file.
+    - family: Roboto
+      fonts:
+        - asset: fonts/AtkinsonHyperlegibleNext.ttf

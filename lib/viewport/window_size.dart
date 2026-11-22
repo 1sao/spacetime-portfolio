@@ -30,6 +30,9 @@ class WindowSize {
   /// The height while the address bar is hidden, as CSS `100lvh`.
   final double largeHeight;
 
+  /// The [WidthClass] of [width].
+  WidthClass get widthClass => WidthClass.of(width);
+
   @override
   bool operator ==(Object other) =>
       other is WindowSize &&
@@ -39,6 +42,24 @@ class WindowSize {
 
   @override
   int get hashCode => Object.hash(width, smallHeight, largeHeight);
+}
+
+/// The first three of Material 3's window size classes, by width.
+enum WidthClass {
+  /// Under 600 logical pixels: phones held upright.
+  compact,
+
+  /// 600 to 839.
+  medium,
+
+  /// 840 or more, which also covers Material 3's wider classes.
+  expanded;
+
+  static WidthClass of(double width) => switch (width) {
+    < 600 => compact,
+    < 840 => medium,
+    _ => expanded,
+  };
 }
 
 final windowSizeProvider = NotifierProvider<WindowSizeNotifier, WindowSize>(
