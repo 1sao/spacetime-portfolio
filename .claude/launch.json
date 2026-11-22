@@ -10,7 +10,7 @@
     {
       "name": "phone",
       "runtimeExecutable": "flutter",
-      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8081", "--web-hostname", "0.0.0.0", "--release"],
+      "runtimeArgs": ["run", "-d", "web-server", "--web-port", "8081", "--web-hostname", "0.0.0.0", "--release", "--wasm", "--no-cross-origin-isolation"],
       "port": 8081
     }
   ]

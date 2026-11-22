@@ -1,13 +1,18 @@
-// Builds the performance tour (`bench/tour.dart`), runs it in Chrome with
-// the frame rate unlocked, and prints the frame times of each segment.
+// Builds the performance tour (`bench/tour.dart`), runs it in Chrome (with
+// the frame rate unlocked, unless --vsync), and prints the start-up times
+// and the frame times of each segment.
 //
 // Each --setup is a URL query for the app, such as `lensing=12`.
 // One build serves every setup, and the setups take turns, so a busy
-// moment of the machine hits each of them alike.
+// moment of the machine hits each of them alike. The server sends each
+// file compressed with gzip, as a web host does, and each tour runs in a
+// new Chrome, so that nothing is cached, as on a first visit.
 //
 // Usage: dart run tool/measure_performance.dart [--runs 3] [--no-build]
-//          [--setup <query>]... [--segments <names>] [--settle <s>]
-//          [--dwell <s>] [--headed] [--chrome <path>] [--update-baseline]
+//          [--compiler wasm|js] [--isolated] [--vsync] [--pixel-ratio 2]
+//          [--download <Mbit/s>] [--latency <ms>] [--setup <query>]...
+//          [--segments <names>] [--settle <s>] [--dwell <s>] [--headed]
+//          [--chrome <path>] [--update-baseline]
 
 import 'dart:async';
 import 'dart:convert';
@@ -15,7 +20,9 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:args/args.dart';
+import 'package:puppeteer/protocol/network.dart' show NetworkConditions;
 import 'package:puppeteer/puppeteer.dart';
+import 'package:shelf/shelf.dart' show Handler;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_static/shelf_static.dart';
 
@@ -30,19 +37,46 @@ const _usageError = 64;
 const _macChrome =
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-/// The longest time that one tour can take. A tour takes about 20 s.
+/// The longest time that one tour can take, a slow download included.
 const _tourTimeout = Duration(minutes: 3);
-
-const _viewport = DeviceViewport(
-  width: 1280,
-  height: 800,
-  deviceScaleFactor: 2,
-);
 
 Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
     ..addOption('runs', defaultsTo: '3', help: 'How many tours to run.')
     ..addFlag('build', defaultsTo: true, help: 'Build the tour first.')
+    ..addOption(
+      'compiler',
+      allowed: ['wasm', 'js'],
+      defaultsTo: 'wasm',
+      help: 'The build that Chrome runs.',
+    )
+    ..addFlag(
+      'isolated',
+      help:
+          'Send the headers that make the page cross-origin isolated, so '
+          'that the wasm build draws on a thread of its own. Needs --vsync: '
+          "the tour cannot unlock that thread's frame rate.",
+    )
+    ..addFlag(
+      'vsync',
+      help:
+          "Keep Chrome's usual frame rate, and do not wait for the GPU after "
+          'each frame, as for a visitor.',
+    )
+    ..addOption(
+      'pixel-ratio',
+      defaultsTo: '2',
+      help: 'The device pixel ratio of the 1280x800 window.',
+    )
+    ..addOption(
+      'download',
+      help: 'The download speed, in Mbit/s. Not limited by default.',
+    )
+    ..addOption(
+      'latency',
+      defaultsTo: '0',
+      help: 'The time added to each request, in ms.',
+    )
     ..addMultiOption(
       'setup',
       splitCommas: false,
@@ -67,12 +101,27 @@ Future<void> main(List<String> arguments) async {
     )
     ..addFlag('help', abbr: 'h', negatable: false);
   final options = parser.parse(arguments);
+  final compiler = options.option('compiler')!;
+  final isIsolated = options.flag('isolated');
+  final isVsyncOn = options.flag('vsync');
+  final buildDir = '$_buildDir/$compiler';
   final runs = int.tryParse(options.option('runs')!);
+  final pixelRatio = double.tryParse(options.option('pixel-ratio')!);
+  final download = options.option('download');
+  final downloadMbps = download == null ? null : double.tryParse(download);
+  final latencyMs = double.tryParse(options.option('latency')!);
   final setups = [...options.multiOption('setup')];
   if (setups.isEmpty) setups.add('');
   if (options.flag('help') ||
       runs == null ||
       runs < 1 ||
+      !(pixelRatio != null && pixelRatio.isFinite && pixelRatio > 0) ||
+      (download != null &&
+          !(downloadMbps != null &&
+              downloadMbps.isFinite &&
+              downloadMbps > 0)) ||
+      !(latencyMs != null && latencyMs.isFinite && latencyMs >= 0) ||
+      (isIsolated && !isVsyncOn) ||
       (options.flag('update-baseline') && setups.length > 1)) {
     stdout.writeln(parser.usage);
     if (!options.flag('help')) exitCode = _usageError;
@@ -81,63 +130,104 @@ Future<void> main(List<String> arguments) async {
 
   Directory.current = File.fromUri(Platform.script).parent.parent;
 
-  if (options.flag('build')) await _build();
+  if (options.flag('build')) await _build(compiler, buildDir);
 
   final tourQuery = [
     for (final name in ['segments', 'settle', 'dwell'])
       if (options.option(name) case final value?)
         '$name=${Uri.encodeQueryComponent(value)}',
+    if (isVsyncOn) 'wait=0',
   ];
+  final network = downloadMbps != null || latencyMs > 0
+      ? NetworkConditions(
+          urlPattern: '',
+          latency: latencyMs,
+          downloadThroughput: downloadMbps == null
+              ? -1
+              : downloadMbps * 1e6 / 8,
+          uploadThroughput: -1,
+        )
+      : null;
 
+  Future<Browser> launchChrome() => puppeteer.launch(
+    executablePath: options.option('chrome'),
+    headless: !options.flag('headed'),
+    defaultViewport: DeviceViewport(
+      width: 1280,
+      height: 800,
+      deviceScaleFactor: pixelRatio,
+    ),
+    args: [
+      if (!isVsyncOn) ...['--disable-gpu-vsync', '--disable-frame-rate-limit'],
+    ],
+  );
+
+  final String renderer;
+  final String chrome;
+  final probe = await launchChrome();
+  try {
+    renderer = await probe.renderer;
+    chrome = await probe.version;
+  } finally {
+    await probe.close();
+  }
+  if (renderer.contains('SwiftShader')) {
+    throw StateError('Chrome draws without the GPU: $renderer');
+  }
+
+  final handler = _gzipHandler(buildDir);
   final server = await shelf_io.serve(
-    createStaticHandler(_buildDir, defaultDocument: 'index.html'),
+    isIsolated ? handler.isolated : handler,
     InternetAddress.loopbackIPv4,
     0,
   );
-  final List<Map<String, Object?>> allResults;
+  final tours = [for (final _ in setups) <Map<String, Object?>>[]];
   try {
-    final browser = await puppeteer.launch(
-      executablePath: options.option('chrome'),
-      headless: !options.flag('headed'),
-      defaultViewport: _viewport,
-      args: ['--disable-gpu-vsync', '--disable-frame-rate-limit'],
-    );
-    try {
-      final renderer = await browser.renderer;
-      if (renderer.contains('SwiftShader')) {
-        throw StateError('Chrome draws without the GPU: $renderer');
-      }
-      final url = 'http://${server.address.host}:${server.port}/';
-      final tours = [for (final _ in setups) <Map<String, Object?>>[]];
-      for (var run = 1; run <= runs; run++) {
-        for (final (index, setup) in setups.indexed) {
-          stdout.writeln(
-            'Tour $run of $runs${setup.isEmpty ? '' : ', $setup'}...',
+    final url = 'http://${server.address.host}:${server.port}/';
+    for (var run = 1; run <= runs; run++) {
+      for (final (index, setup) in setups.indexed) {
+        stdout.writeln(
+          'Tour $run of $runs${setup.isEmpty ? '' : ', $setup'}...',
+        );
+        final query = [if (setup.isNotEmpty) setup, ...tourQuery].join('&');
+        final browser = await launchChrome();
+        try {
+          final tour = await browser.runTour(
+            query.isEmpty ? url : '$url?$query',
+            network: network,
           );
-          final query = [if (setup.isNotEmpty) setup, ...tourQuery].join('&');
-          tours[index].add(
-            await browser.runTour(query.isEmpty ? url : '$url?$query'),
-          );
+          if (tour['isWasm'] case final bool isWasm
+              when isWasm != (compiler == 'wasm')) {
+            (tour['problems']! as List<Object?>).add(
+              'It ran the ${isWasm ? 'wasm' : 'js'} build.',
+            );
+          }
+          tours[index].add(tour);
+        } finally {
+          await browser.close();
         }
       }
-      final date = DateTime.now().toIso8601String();
-      final chrome = await browser.version;
-      allResults = [
-        for (final (index, setup) in setups.indexed)
-          {
-            'date': date,
-            'setup': setup,
-            'chrome': chrome,
-            'renderer': renderer,
-            'tours': tours[index],
-          },
-      ];
-    } finally {
-      await browser.close();
     }
   } finally {
     await server.close();
   }
+  final date = DateTime.now().toIso8601String();
+  final allResults = [
+    for (final (index, setup) in setups.indexed)
+      {
+        'date': date,
+        'setup': setup,
+        'compiler': compiler,
+        'isolated': isIsolated,
+        'vsync': isVsyncOn,
+        'pixelRatio': pixelRatio,
+        'downloadMbps': downloadMbps,
+        'latencyMs': latencyMs,
+        'chrome': chrome,
+        'renderer': renderer,
+        'tours': tours[index],
+      },
+  ];
 
   final baselineFile = File(_baselinePath);
   final baseline = await baselineFile.exists()
@@ -181,16 +271,17 @@ Future<void> main(List<String> arguments) async {
   }
 }
 
-Future<void> _build() async {
-  stdout.writeln('Building the tour...');
+Future<void> _build(String compiler, String buildDir) async {
+  stdout.writeln('Building the tour ($compiler)...');
   final build = await Process.start('flutter', [
     'build',
     'web',
     '--release',
+    if (compiler == 'wasm') '--wasm',
     '--target',
     'bench/tour.dart',
     '--output',
-    Directory(_buildDir).absolute.path,
+    Directory(buildDir).absolute.path,
     '--no-web-resources-cdn',
   ], mode: ProcessStartMode.inheritStdio);
   if (await build.exitCode != 0) {
@@ -198,13 +289,22 @@ Future<void> _build() async {
   }
 }
 
-/// A table of each segment's statistics over the valid tours: the median
-/// over the tours, and the smallest and largest value in brackets. With a
-/// [baseline], the change of the median and the p90 against it.
+/// The tables of the valid tours: each segment's frame times, and the
+/// start-up times. Each cell is the median over the tours, with the
+/// smallest and the largest value in brackets. With a [baseline], a warning
+/// for each setting that differs, and the change of the median and the p90
+/// against it.
 String _report(Map<String, Object?> results, Map<String, Object?>? baseline) {
   final lines = <String>[];
   if (baseline != null) {
-    for (final key in ['chrome', 'renderer']) {
+    for (final key in [
+      'compiler',
+      'isolated',
+      'vsync',
+      'pixelRatio',
+      'chrome',
+      'renderer',
+    ]) {
       if (baseline[key] != results[key]) {
         lines.add(
           'Warning: the baseline has $key "${baseline[key]}", '
@@ -221,6 +321,7 @@ String _report(Map<String, Object?> results, Map<String, Object?>? baseline) {
     [
       'segment',
       'frames',
+      'mean ms',
       'median ms',
       'p90 ms',
       'worst ms',
@@ -231,6 +332,7 @@ String _report(Map<String, Object?> results, Map<String, Object?>? baseline) {
       [
         segment,
         tours.map((stats) => stats.frames).spread(digits: 0),
+        tours.map((stats) => stats.meanMs).spread(),
         tours.map((stats) => stats.medianMs).spread(),
         tours.map((stats) => stats.p90Ms).spread(),
         tours.map((stats) => stats.worstMs).spread(),
@@ -239,21 +341,83 @@ String _report(Map<String, Object?> results, Map<String, Object?>? baseline) {
           tours.changeFrom(baselineSegments[segment] ?? const []),
       ],
   ];
-  final widths = [
-    for (var column = 0; column < rows.first.length; column++)
-      rows.map((row) => row[column].length).reduce(math.max),
-  ];
-  for (final row in rows) {
-    lines.add(
-      [
-        for (final (column, cell) in row.indexed)
-          column == 0
-              ? cell.padRight(widths[column])
-              : cell.padLeft(widths[column]),
-      ].join('  '),
-    );
+  lines.addAll(rows.tableLines);
+
+  final startups = results.startups;
+  if (startups.isNotEmpty) {
+    String spreadOf(double? Function(StartupStats startup) step) {
+      final values = startups.map(step).nonNulls;
+      return values.isEmpty ? '-' : values.spread(digits: 0);
+    }
+
+    lines
+      ..add('')
+      ..addAll(
+        [
+          ['start-up', 'ms'],
+          ['Dart starts', spreadOf((startup) => startup.dartMs)],
+          ['first frame', spreadOf((startup) => startup.firstFrameMs)],
+          ['scene drawn', spreadOf((startup) => startup.sceneMs)],
+          [
+            'downloaded, MB',
+            startups.map((startup) => startup.downloadedBytes / 1e6).spread(),
+          ],
+        ].tableLines,
+      );
   }
   return lines.join('\n');
+}
+
+/// A handler for the files in [dir] that sends each file compressed with
+/// gzip, as a web host does. The files are compressed here, before the
+/// tours, so that the compression does not add to the start-up times.
+Handler _gzipHandler(String dir) {
+  final staticHandler = createStaticHandler(dir, defaultDocument: 'index.html');
+  final compressed = {
+    for (final file in Directory(
+      dir,
+    ).listSync(recursive: true).whereType<File>())
+      file.path.substring(dir.length + 1): gzip.encode(file.readAsBytesSync()),
+  };
+  return (request) async {
+    final response = await staticHandler(request);
+    final path = request.url.pathSegments.join('/');
+    final body = compressed[path.isEmpty ? 'index.html' : path];
+    if (response.statusCode != HttpStatus.ok || body == null) return response;
+    return response.change(body: body, headers: {'content-encoding': 'gzip'});
+  };
+}
+
+extension on List<List<String>> {
+  /// These rows as lines of a table, with the first column on the left and
+  /// the others on the right.
+  List<String> get tableLines {
+    final widths = [
+      for (var column = 0; column < first.length; column++)
+        map((row) => row[column].length).reduce(math.max),
+    ];
+    return [
+      for (final row in this)
+        [
+          for (final (column, cell) in row.indexed)
+            column == 0
+                ? cell.padRight(widths[column])
+                : cell.padLeft(widths[column]),
+        ].join('  '),
+    ];
+  }
+}
+
+extension on Handler {
+  /// This handler, with the headers that make the page cross-origin
+  /// isolated. Only an isolated page can share memory between threads.
+  Handler get isolated =>
+      (request) async => (await this(request)).change(
+        headers: {
+          'Cross-Origin-Opener-Policy': 'same-origin',
+          'Cross-Origin-Embedder-Policy': 'require-corp',
+        },
+      );
 }
 
 extension on Browser {
@@ -273,11 +437,18 @@ extension on Browser {
     }
   }
 
-  /// Runs the tour at [url] in a new page. A tour that does not finish in
-  /// time gives a result with a problem.
-  Future<Map<String, Object?>> runTour(String url) async {
+  /// Runs the tour at [url] in a new page, with the [network]'s download
+  /// speed and latency, if any. A tour that does not finish in time gives a
+  /// result with a problem.
+  Future<Map<String, Object?>> runTour(
+    String url, {
+    required NetworkConditions? network,
+  }) async {
     final page = await newPage();
     try {
+      if (network != null) {
+        await page.devTools.network.emulateNetworkConditionsByRule([network]);
+      }
       // Listens before the page loads, so the result line cannot come first.
       // ignore(): if goto throws, the page closes and this future fails
       // unawaited.
@@ -344,12 +515,23 @@ extension on Map<String, Object?> {
       tour! as Map<String, Object?>,
   ];
 
+  /// The tours that have no problems.
+  List<Map<String, Object?>> get validTours => [
+    for (final tour in tours)
+      if ((tour['problems']! as List<Object?>).isEmpty) tour,
+  ];
+
+  /// The start-up of each valid tour.
+  List<StartupStats> get startups => [
+    for (final tour in validTours)
+      StartupStats.fromJson(tour['startup']! as Map<String, Object?>),
+  ];
+
   /// The statistics of each segment, one for each valid tour, in the order
   /// of the first valid tour.
   Map<String, List<SegmentStats>> get segments {
     final segments = <String, List<SegmentStats>>{};
-    for (final tour in tours) {
-      if ((tour['problems']! as List<Object?>).isNotEmpty) continue;
+    for (final tour in validTours) {
       final tourSegments = tour['segments']! as Map<String, Object?>;
       for (final MapEntry(key: segment, value: stats) in tourSegments.entries) {
         segments

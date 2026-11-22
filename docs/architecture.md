@@ -116,6 +116,17 @@ can use them.
 
 ## Libraries and state
 
+- **The build:** `flutter build web --wasm` compiles the site twice: to
+  WebAssembly, drawn by skwasm, and to JavaScript, drawn by CanvasKit.
+  Flutter's loader picks one in the browser. Chromium browsers, such as
+  Chrome and Edge, get WebAssembly, which starts sooner
+  (`tool/measure_performance.dart` measures both). Safari (and so every
+  browser on iOS), Firefox and browsers without WasmGC or WebGL get
+  JavaScript, as Flutter sets by default. Skwasm draws on a thread of its
+  own only if the page is cross-origin isolated, for example when the
+  host sends `Cross-Origin-Opener-Policy: same-origin` and
+  `Cross-Origin-Embedder-Policy: require-corp`; otherwise it draws on the
+  page's thread.
 - **Widgets:** `package:material_ui`, not the SDK's `flutter/material.dart`.
   go_router 18 is built on it.
 - **State:** Riverpod 3, without code generation. Content, the router and

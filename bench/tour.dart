@@ -1,14 +1,14 @@
-// The performance tour: the real app at rest on the Landing, sharp and
-// soft. Built and run by `tool/measure_performance.dart`.
+// The performance tour: the app's start-up, and the app at rest on the
+// Landing, sharp and soft. Built and run by `tool/measure_performance.dart`.
 //
-// The URL's query sets the tour: `settle` and `dwell` in seconds, and
+// The URL's query sets the tour: `settle` and `dwell` in seconds,
 // `segments`, the names of the segments to measure, separated by commas
-// (all if it is left out). The app reads the rest of the query, such as
-// `lensing`.
+// (all if it is left out), and `wait=0`, which stops the wait for the GPU
+// after each frame. The app reads the rest of the query, such as `lensing`.
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
+import 'dart:js_interop';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -42,9 +42,17 @@ final _dwell = _seconds('dwell', 2);
 /// The segments to measure, or null for all of them.
 final Set<String>? _segments = _query['segments']?.split(',').toSet();
 
+/// Whether the tour waits for the GPU after each frame.
+final _isGpuWaitOn = _query['wait'] != '0';
+
+/// The time since the navigation started, in ms.
+double get _sinceNavigationMs => web.window.performance.now();
+
 Future<void> main() async {
   final container = ProviderContainer();
-  final tour = _Tour(container)..reportErrors();
+  final tour = _Tour(container)
+    ..reportErrors()
+    ..timeFirstFrame();
   runApp(UncontrolledProviderScope(container: container, child: const App()));
 
   Map<String, Object?> result;
@@ -65,6 +73,18 @@ class _Tour {
 
   final ProviderContainer _container;
 
+  /// See [StartupStats.dartMs].
+  final double _dartMs = _sinceNavigationMs;
+
+  /// See [StartupStats.firstFrameMs]. Null until that frame.
+  double? _firstFrameMs;
+
+  /// See [StartupStats.sceneMs].
+  double? _sceneMs;
+
+  /// See [StartupStats.downloadedBytes].
+  int _downloadedBytesToScene = 0;
+
   final _recorder = FrameRecorder();
 
   /// Errors and other problems during the tour, apart from those of the
@@ -74,12 +94,12 @@ class _Tour {
   /// Why the result is not valid. Empty if it is valid.
   List<String> get problems => [..._problems, ..._recorder.problems];
 
-  /// A pixel drawn and read after each frame to force the frame.
-  final Picture _pixel = () {
-    final recorder = PictureRecorder();
-    Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 1, 1), Paint());
-    return recorder.endRecording();
-  }();
+  /// A WebGL context of one pixel, separate from the app's, that
+  /// [_readPixel] reads.
+  late final web.WebGL2RenderingContext _readbackContext;
+
+  /// Where [_readPixel] puts the pixel.
+  final _pixel = Uint8List(4).toJS;
 
   /// Adds each error of the app to [problems].
   void reportErrors() {
@@ -95,18 +115,46 @@ class _Tour {
     };
   }
 
+  /// Times the first frame that the browser shows, from the event that the
+  /// engine sends then.
+  void timeFirstFrame() {
+    web.window.addEventListener(
+      'flutter-first-frame',
+      (web.Event _) {
+        _firstFrameMs = _sinceNavigationMs;
+      }.toJS,
+    );
+  }
+
   Future<void> run() async {
+    final readbackContext = web.OffscreenCanvas(1, 1).getContext('webgl2');
+    if (readbackContext == null) {
+      throw StateError('Chrome gave no WebGL2 context for the GPU wait.');
+    }
+    _readbackContext = readbackContext as web.WebGL2RenderingContext;
+
     SchedulerBinding.instance.addPersistentFrameCallback((_) {
       _recorder.recordFrame(
         SchedulerBinding.instance.currentSystemFrameTimeStamp,
       );
-      _waitForGpu();
+      // The engine sends each frame to the GPU after the frame's task, so
+      // this read waits for the frame before this one.
+      if (_isGpuWaitOn) _readPixel();
     });
     _container.listen(isSceneRunningProvider, (_, isRunning) {
       if (!isRunning) _problems.add('The scene stopped during the tour.');
     }, fireImmediately: true);
 
     await _container.read(sceneAssetsProvider.future);
+    await SchedulerBinding.instance.endOfFrame;
+    // The engine sends the frame to the GPU in microtasks after the frame,
+    // and a timer runs after them. The read then waits for the GPU's work
+    // on the first frame after the assets load, such as the shader's
+    // compile.
+    await Future<void>.delayed(Duration.zero);
+    _readPixel();
+    if (!web.window.crossOriginIsolated) _sceneMs = _sinceNavigationMs;
+    _downloadedBytesToScene = _downloadedBytes;
     await SchedulerBinding.instance.endOfFrames(_warmUpFrames);
     await _measure('Landing');
 
@@ -125,24 +173,65 @@ class _Tour {
     _recorder.stop();
   }
 
-  /// After each frame, reads one pixel back from the GPU. The read waits
-  /// until the GPU has done the work queued before it, so frames cannot
-  /// queue ahead of the GPU, and a frame's time includes its GPU work.
-  void _waitForGpu() {
-    Timer.run(() => _pixel.toImageSync(1, 1).dispose());
+  /// Reads one pixel back from the GPU. In Chrome, a read on one WebGL
+  /// context should wait until the GPU has run the work that the page's
+  /// other contexts sent before it. In each frame, this keeps frames from
+  /// queuing ahead of the GPU, so a frame's time includes its GPU work.
+  ///
+  /// The read is on a context of its own, so that it costs the same with
+  /// CanvasKit and with skwasm. It does not wait for skwasm when skwasm
+  /// draws on a thread of its own.
+  void _readPixel() => _readbackContext.readPixels(
+    0,
+    0,
+    1,
+    1,
+    web.WebGLRenderingContext.RGBA,
+    web.WebGLRenderingContext.UNSIGNED_BYTE,
+    _pixel,
+  );
+
+  /// The bytes that the page has downloaded, headers included. Files that a
+  /// worker downloads are not in the page's list.
+  int get _downloadedBytes {
+    final performance = web.window.performance;
+    return [
+      ...performance.getEntriesByType('navigation').toDart,
+      ...performance.getEntriesByType('resource').toDart,
+    ].fold(
+      0,
+      (bytes, entry) =>
+          bytes + (entry as web.PerformanceResourceTiming).transferSize,
+    );
   }
 
-  Map<String, Object?> result() => {
-    'problems': problems,
-    'devicePixelRatio': web.window.devicePixelRatio,
-    'width': web.window.innerWidth,
-    'height': web.window.innerHeight,
-    'segments': {
-      for (final MapEntry(key: segment, value: stats)
-          in _recorder.stats.entries)
-        segment: stats.toJson(),
-    },
-  };
+  Map<String, Object?> result() {
+    final firstFrameMs = _firstFrameMs;
+    return {
+      'problems': [
+        ...problems,
+        if (firstFrameMs == null) 'The engine sent no first-frame event.',
+        if (_readbackContext.isContextLost())
+          'The context of the GPU wait was lost.',
+      ],
+      'isWasm': kIsWasm,
+      'devicePixelRatio': web.window.devicePixelRatio,
+      'width': web.window.innerWidth,
+      'height': web.window.innerHeight,
+      if (firstFrameMs != null)
+        'startup': StartupStats(
+          dartMs: _dartMs,
+          firstFrameMs: firstFrameMs,
+          sceneMs: _sceneMs,
+          downloadedBytes: _downloadedBytesToScene,
+        ).toJson(),
+      'segments': {
+        for (final MapEntry(key: segment, value: stats)
+            in _recorder.stats.entries)
+          segment: stats.toJson(),
+      },
+    };
+  }
 }
 
 extension on SchedulerBinding {

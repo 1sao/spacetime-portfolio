@@ -10,6 +10,7 @@ void main() {
     // 1 to 10 ms, shuffled.
     final stats = SegmentStats.of([7, 3, 10, 1, 9, 2, 8, 4, 6, 5]);
     expect(stats.frames, 10);
+    expect(stats.meanMs, 5.5);
     expect(stats.medianMs, 5);
     expect(stats.p90Ms, 9);
     expect(stats.worstMs, 10);
@@ -26,9 +27,24 @@ void main() {
     final stats = SegmentStats.of([1, 2, 12]);
     final json = jsonDecode(jsonEncode(stats.toJson())) as Map<String, Object?>;
     // dart2js writes a whole double without a fraction, as here.
+    json['meanMs'] = 5;
     json['medianMs'] = 2;
     final copy = SegmentStats.fromJson(json);
     expect(copy.toJson(), stats.toJson());
+  });
+
+  test('the start-up survives JSON, also without a scene time', () {
+    for (final sceneMs in [480.5, null]) {
+      final startup = StartupStats(
+        dartMs: 210.5,
+        firstFrameMs: 320.25,
+        sceneMs: sceneMs,
+        downloadedBytes: 3000000,
+      );
+      final json =
+          jsonDecode(jsonEncode(startup.toJson())) as Map<String, Object?>;
+      expect(StartupStats.fromJson(json).toJson(), startup.toJson());
+    }
   });
 
   group('FrameRecorder', () {

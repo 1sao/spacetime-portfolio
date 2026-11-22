@@ -1,9 +1,11 @@
 import 'frame_stats.dart';
 
 /// A frame longer than this, in ms, shows that Chrome queued frames ahead
-/// of the GPU and then waited for all of them. The tour's wait for the GPU
-/// after each frame should prevent it.
-const _longestValidFrameMs = 1000.0;
+/// of the GPU and then waited for all of them. The queue should stay short
+/// while the tour waits for the GPU after each frame, or while Chrome keeps
+/// to the display's frame rate (`--vsync`). No frame of the tour comes near
+/// this time otherwise.
+const _longestValidFrameMs = 500.0;
 
 /// A median shorter than this, in ms, shows the same queue: the queued
 /// frames take almost no time.
