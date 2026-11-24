@@ -1,23 +1,11 @@
-/// One item in a [Section], such as a project in Work.
-class Entry {
-  const Entry({required this.title, required this.text});
-
-  final String title;
-  final String text;
-}
-
 /// The sections of the page, in page order. The name is the section's URL
 /// fragment: `/#work`.
 enum SectionId { about, work, personal, contact, credits }
 
-/// A section of the page, such as About or Work.
+/// What the reading screen and the Landing both show for a section of the
+/// page.
 class Section {
-  const Section({
-    required this.id,
-    required this.title,
-    this.descriptor,
-    required this.entries,
-  });
+  const Section({required this.id, required this.title, this.descriptor});
 
   final SectionId id;
   final String title;
@@ -25,5 +13,21 @@ class Section {
   /// The short line under the section's title on the Landing, if the
   /// section has a title there.
   final String? descriptor;
-  final List<Entry> entries;
+}
+
+/// A work by another author that the site uses.
+class Credit {
+  const Credit({
+    required this.workName,
+    required this.author,
+    required this.licenceName,
+    required this.licenceFile,
+  });
+
+  final String workName;
+  final String author;
+
+  final String licenceName;
+
+  final String licenceFile;
 }

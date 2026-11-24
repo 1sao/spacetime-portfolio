@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:homepage_v2/scene/frame_loop.dart';
 import 'package:homepage_v2/space/frame_snapshot.dart';
 
-import '../fake_content.dart';
+import '../fake_bodies.dart';
 import '../pump_app.dart';
 
 void main() {
@@ -46,7 +46,6 @@ void main() {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1280, 800);
     await pumpApp(tester);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     FrameSnapshot currentFrame() =>
         tester.container().read(frameSnapshotListenableProvider).value;
     expect(currentFrame().camera.roll, 0);

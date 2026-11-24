@@ -14,8 +14,8 @@ abstract final class SiteColours {
   /// The 1 px inner rim of every [enamel] surface.
   static const enamelRim = Color(0xFF2D2922);
 
-  /// The rule between sections on the reading screen.
-  static const ruleLine = Color(0xFF3D372E);
+  /// The divider between sections on the reading screen.
+  static const dividerLine = Color(0xFF3D372E);
 
   /// Unlit ticks of a scale. Too dark for text.
   static const scaleTick = Color(0xFF4A4236);

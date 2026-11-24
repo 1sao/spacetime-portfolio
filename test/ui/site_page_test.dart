@@ -1,13 +1,20 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:homepage_v2/scene/scene_layout_provider.dart';
 import 'package:homepage_v2/scene/scene_view.dart';
+import 'package:homepage_v2/space/system.dart';
 import 'package:homepage_v2/ui/reading_screen.dart';
-import 'package:homepage_v2/ui/spacing.dart';
 import 'package:homepage_v2/viewport/window_size.dart';
 
 import '../pump_app.dart';
+import '../site_fonts.dart';
 
 void main() {
+  setUpAll(loadSiteFonts);
+
   testWidgets('the scene and the Landing keep their sizes while the '
       "window's height changes with the address bar", (tester) async {
     const window = WindowSize(width: 400, smallHeight: 700, largeHeight: 780);
@@ -20,20 +27,137 @@ void main() {
       ],
     );
 
-    for (final windowHeight in [window.smallHeight, window.largeHeight]) {
+    Future<(Rect, double)> sizesAt(double windowHeight) async {
       tester.view.physicalSize = Size(window.width, windowHeight);
       await tester.pump();
-      final reason = 'window $windowHeight tall';
-      expect(
+      return (
         tester.getRect(find.byType(SceneView)),
-        Rect.fromLTWH(0, 0, window.width, window.largeHeight),
-        reason: reason,
-      );
-      expect(
         tester.getTopLeft(find.byType(ReadingScreen)).dy,
-        window.smallHeight - SiteSpacing.peek,
-        reason: reason,
       );
     }
+
+    expect(
+      await sizesAt(window.largeHeight),
+      await sizesAt(window.smallHeight),
+    );
   });
+
+  testWidgets('on the Landing, every body is whole in the window and above '
+      'the intro', (tester) async {
+    // The phone held sideways is too short for the intro under the bodies.
+    const sideways = Size(844, 390);
+    const windows = [
+      Size(1600, 1000),
+      Size(1280, 720),
+      Size(2560, 900),
+      Size(600, 800),
+      Size(599, 800),
+      Size(390, 844),
+      sideways,
+    ];
+    await pumpApp(tester, window: windows.first, fakeBodies: false);
+
+    for (final window in windows) {
+      tester.view.physicalSize = window;
+      // The floor is set after a frame, so a second frame applies it.
+      await tester.pump();
+      await tester.pump();
+      final reason = '${window.width}x${window.height}';
+      final layout = tester.container().read(sceneLayoutProvider);
+      final camera = layout.landingCamera;
+      final intro = tester.getRect(_intro);
+
+      for (final body in bodies.values) {
+        final centre = body.positionAt(0);
+        final pixel = camera.project(centre, layout.screen)!;
+        final radius = camera.projectedRadius(centre, body.reach);
+        expect(pixel.x - radius, greaterThan(0), reason: reason);
+        expect(pixel.x + radius, lessThan(window.width), reason: reason);
+        expect(pixel.y - radius, greaterThanOrEqualTo(0), reason: reason);
+        expect(pixel.y + radius, lessThan(window.height), reason: reason);
+        if (window != sideways) {
+          expect(pixel.y + radius, lessThan(intro.top), reason: reason);
+        }
+      }
+    }
+  });
+
+  group('the reading screen below the Landing', () {
+    Future<void> pumpPage(WidgetTester tester) async {
+      await pumpApp(tester, window: const Size(1280, 800));
+      await tester.pump();
+    }
+
+    ScrollPosition position(WidgetTester tester) =>
+        tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+
+    Future<void> scrollTo(WidgetTester tester, double offset) async {
+      position(tester).jumpTo(offset);
+      await tester.pump();
+    }
+
+    testWidgets('a tap on it scrolls until About is 40 px below the '
+        "window's top, while the Landing shows", (tester) async {
+      await pumpPage(tester);
+      await tester.tapAt(tester.getCenter(find.text('About')));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.text('About')).dy, moreOrLessEquals(40));
+    });
+
+    testWidgets('a tap on the sky beside the panel does nothing', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      final heading = tester.getCenter(find.text('About'));
+      await tester.tapAt(Offset(1200, heading.dy));
+      await tester.pumpAndSettle();
+      expect(position(tester).pixels, 0);
+    });
+
+    testWidgets('a tap does nothing once the page has scrolled', (
+      tester,
+    ) async {
+      await pumpPage(tester);
+      await scrollTo(tester, 10);
+      await tester.tapAt(tester.getCenter(find.text('About')));
+      await tester.pumpAndSettle();
+      expect(position(tester).pixels, 10);
+    });
+
+    testWidgets('a drag selects no text while the Landing shows, and '
+        'selects text once the page has scrolled', (tester) async {
+      await pumpPage(tester);
+      for (final (offset, isSelected) in [(0.0, false), (10.0, true)]) {
+        await scrollTo(tester, offset);
+        final heading = tester.getRect(find.text('About'));
+        final drag = await tester.startGesture(
+          heading.centerLeft + const Offset(2, 0),
+          kind: PointerDeviceKind.mouse,
+        );
+        await tester.pump();
+        await drag.moveTo(heading.centerRight - const Offset(2, 0));
+        await tester.pump();
+        await drag.up();
+        await tester.pump();
+        expect(
+          tester.selectedParagraphs,
+          isSelected ? isNotEmpty : isEmpty,
+          reason: 'at $offset px',
+        );
+      }
+    });
+  });
+}
+
+final _intro = find
+    .ancestor(of: find.text('[Name]'), matching: find.byType(Column))
+    .first;
+
+extension on WidgetTester {
+  List<RenderParagraph> get selectedParagraphs => [
+    for (final paragraph in renderObjectList<RenderParagraph>(
+      find.byType(RichText),
+    ))
+      if (paragraph.selections.isNotEmpty) paragraph,
+  ];
 }

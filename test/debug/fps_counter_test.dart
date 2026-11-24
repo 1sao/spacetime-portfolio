@@ -6,7 +6,7 @@ void main() {
   testWidgets('the counter shows the frames per second of the scene', (
     tester,
   ) async {
-    await pumpApp(tester);
+    await pumpApp(tester, isSceneRunning: true);
     expect(find.text('– fps'), findsOneWidget);
 
     // 0.5 s of frames 8 ms apart: 125 a second.

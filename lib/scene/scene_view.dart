@@ -10,6 +10,7 @@ import 'frame_loop.dart';
 import 'hole_textures.dart';
 import 'kepler_textures.dart';
 import 'looks.dart';
+import 'scene_layout_provider.dart';
 import 'scene_shader.dart';
 import 'sky_cache.dart';
 

@@ -21,8 +21,10 @@ Credits, which frames the hole.
 
 This document describes the design that the code is built toward. Today the
 scene shows the Landing with the planets and the hole, the clocks stand at
-0, and the page is plain text: scroll, drag, titles and URL fragments do
-not yet move anything.
+0, and the page has the intro (the owner's name, role and welcome line
+on the Landing), the reading screen, and the peek (the top of the reading
+screen, under the Landing). The page scrolls over the scene, but scroll,
+drag, titles and URL fragments do not yet move the scene.
 
 ## Rendering
 
@@ -44,10 +46,13 @@ not yet move anything.
   point of the screen where its target lands, a roll and a focal length.
   `SceneLayout`, in `scene/`, gives these three for the scene's size, with
   Material 3's window size classes. Under 600 px wide, the Landing's line
-  of bodies stands upright, with a quarter turn of roll. The sky's set of
-  directions is made for the shortest focal length of the layout, so that
-  every star gets a pixel in every framing, and the sky is not baked again
-  when the camera moves between framings.
+  of bodies stands upright, with a quarter turn of roll. The page gives
+  the layout a floor, which is the room for the body titles above the top
+  of the intro. The Landing's line moves up until the hole and the bodies
+  are above the floor, but no higher than the top of the screen. The sky's
+  set of directions is made for the shortest focal length of the layout,
+  so that every star gets a pixel in every framing, and the sky is not
+  baked again when the camera moves between framings.
 - **Overlays are Flutter widgets,** such as the body titles and their
   leaders, placed by the CPU projection. It does not bend rays: the design
   keeps the bodies that have titles out of the region where the hole's
@@ -64,7 +69,8 @@ not yet move anything.
 
 ```
 lib/
-  content/     sections and their entries: data only
+  content/     the sections' ids, titles and descriptors, and the credits:
+               data only
   space/       pure Dart: the system (orbits, bodies and their looks), the
                camera, projection, pick, the per-frame snapshot
   scene/       the frame loop, the framing for the screen's size, the
@@ -72,6 +78,9 @@ lib/
                the hole and its light
   ui/          the page: the Landing, the reading screen, the colours and
                the type
+    sections/  one widget for each section, with its text
+    reading/   the pieces that the sections are built from: headings,
+               entries, paragraphs, wells, links
   viewport/    the window's width and its width class, and its height
                with the address bar shown and hidden, measured in the
                browser
@@ -112,9 +121,10 @@ can use them.
    - The shader gets the camera's position, directions, focal length and
      target pixel from Dart, so the look-at maths and the roll exist only
      once.
-3. **Content is separate from looks.** What a section says is content. Where
-   its body orbits and how it is drawn are settings, keyed by section id, so
-   reordering the content does not move the bodies.
+3. **Content is separate from looks.** A section's text is in its widget,
+   and its id, title and descriptor are in `content/`. Where its body orbits and how it
+   is drawn are settings, keyed by section id, so reordering the sections
+   does not move the bodies.
 4. **Camera and time behaviour are unit-tested in pure Dart,** in `space/`,
    with no widgets.
 
@@ -141,8 +151,11 @@ can use them.
   `web/flutter_bootstrap.js` points that address to a path on this site
   that has no fonts, so such a glyph shows as a box. `pubspec.yaml` also
   names Atkinson `Roboto`, so Flutter does not look for Roboto.
-- **State:** Riverpod 3, without code generation. Content, the router and
-  settings such as the bodies are providers, so tests override them.
+- **State:** Riverpod 3, without code generation. The sections, the router
+  and settings such as the bodies are providers, so tests override them.
+  A widget that needs listeners or animation controllers uses
+  `flutter_hooks`, through `hooks_riverpod`'s `HookConsumerWidget`. The
+  type styles are a `ThemeExtension` in the theme.
 - **Per-frame values are not Riverpod state.** A provider owns the ticker
   and exposes a `ValueListenable<FrameSnapshot>` that painters repaint
   from. The scene reads inputs that change every frame, such as the scroll
@@ -189,6 +202,10 @@ almost none of the site's words.
 - **All the site's text is on the reading screen,** as text with real
   headings, so screen readers and the keyboard reach all of it without the
   scene. Body titles are real, focusable links. The scene is decorative.
+- **The reading screen's text is selectable,** as on a web page, except
+  in device wells: a mock is a picture of an app. While the Landing shows,
+  a layer over the reading screen takes the pointer, so a click on the
+  peek goes to About and a drag selects nothing.
 - **Quality tiers,** picked at start-up from the device and a short timing
   of the first frames: render resolution, frame rate, and lensing or a
   cheaper shader.
@@ -197,7 +214,9 @@ almost none of the site's words.
 
 The site uses these works by other authors. Each one's licence text is in
 `LICENSES/`, and the site adds it to Flutter's licence page
-(`lib/third_party_licences.dart`).
+(`lib/third_party_licences.dart`). The Credits section lists them from
+`lib/content/site_content.dart`, and a test keeps that list and
+`LICENSES/` in agreement.
 
 - **Star Nest** by Pablo Román Andrioli (Kali), with a noise clamp by
   Beibei Wang and Huw Bowles: the sky.

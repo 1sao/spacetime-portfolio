@@ -132,6 +132,10 @@ class Camera {
     return targetPixel(screen) +
         Vector2(offset.dot(right) * scale, -offset.dot(up) * scale);
   }
+
+  /// A sphere away from the middle of the view looks a little larger.
+  double projectedRadius(Vector3 centre, double radius) =>
+      radius * focalLength / (centre - position).dot(forward);
 }
 
 /// The screen a [Camera] projects onto, in logical pixels.

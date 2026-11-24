@@ -3,10 +3,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
-import '../space/camera.dart';
 import '../space/frame_snapshot.dart';
-import '../viewport/window_size.dart';
-import 'scene_layout.dart';
+import 'scene_layout_provider.dart';
 import 'scene_running.dart';
 
 /// The current [FrameSnapshot], as a listenable. While something watches
@@ -56,17 +54,6 @@ final frameSnapshotListenableProvider =
       });
       return currentFrame;
     });
-
-/// How the scene is framed, for the scene's size: the window's width, and
-/// its height with the address bar hidden.
-final sceneLayoutProvider = Provider<SceneLayout>((ref) {
-  final (:width, :height) = ref.watch(
-    windowSizeProvider.select(
-      (window) => (width: window.width, height: window.largeHeight),
-    ),
-  );
-  return SceneLayout(Screen(width: width, height: height));
-});
 
 extension _FractionalSeconds on Duration {
   double get inFractionalSeconds =>

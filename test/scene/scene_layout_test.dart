@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homepage_v2/content/site_content.dart';
 import 'package:homepage_v2/scene/scene_layout.dart';
 import 'package:homepage_v2/space/camera.dart';
 import 'package:homepage_v2/space/system.dart';
-import 'package:homepage_v2/ui/spacing.dart';
+import 'package:homepage_v2/ui/reading_screen.dart';
+import 'package:homepage_v2/viewport/window_size.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import '../matchers.dart';
@@ -23,6 +26,23 @@ void main() {
 
   /// The bodies in page order.
   final pageOrder = [for (final section in sections) ?bodies[section.id]];
+
+  final discs = [
+    (Vector3.zero(), holeShadowRadius),
+    for (final body in pageOrder) (body.positionAt(0), body.reach),
+  ];
+
+  ({double top, double bottom}) extentOf(SceneLayout layout) {
+    final camera = layout.landingCamera;
+    var (top, bottom) = (double.infinity, double.negativeInfinity);
+    for (final (centre, reach) in discs) {
+      final y = camera.project(centre, layout.screen)!.y;
+      final radius = camera.projectedRadius(centre, reach);
+      top = math.min(top, y - radius);
+      bottom = math.max(bottom, y + radius);
+    }
+    return (top: top, bottom: bottom);
+  }
 
   test('on the Landing, the bodies lie on one line through the hole, in '
       'page order: left to right, or top to bottom on the column', () {
@@ -45,24 +65,60 @@ void main() {
       'screen and above the top of the reading screen', () {
     for (final screen in screens) {
       final camera = SceneLayout(screen).landingCamera;
-      final discs = [
-        (Vector3.zero(), holeShadowRadius),
-        for (final body in pageOrder) (body.positionAt(0), body.reach),
-      ];
       for (final (centre, reach) in discs) {
         final pixel = camera.project(centre, screen)!;
-        final depth = (centre - camera.position).dot(camera.forward);
-        final radius = reach * camera.focalLength / depth;
+        final radius = camera.projectedRadius(centre, reach);
         final reason = screen.name;
         expect(pixel.x - radius, greaterThan(0), reason: reason);
         expect(pixel.x + radius, lessThan(screen.width), reason: reason);
         expect(pixel.y - radius, greaterThan(0), reason: reason);
         expect(
           pixel.y + radius,
-          lessThan(screen.height - SiteSpacing.peek),
+          lessThan(
+            screen.height -
+                ReadingScreen.landingPeekHeight(WidthClass.expanded),
+          ),
           reason: reason,
         );
       }
+    }
+  });
+
+  test('a floor below the lowest body leaves the line where it is', () {
+    for (final screen in screens) {
+      final free = SceneLayout(screen, bodies: pageOrder);
+      final floored = SceneLayout(
+        screen,
+        bodies: pageOrder,
+        landingFloor: extentOf(free).bottom + 1,
+      );
+      expect(
+        floored.landingScreenPoint,
+        free.landingScreenPoint,
+        reason: screen.name,
+      );
+    }
+  });
+
+  test('a floor above the lowest body lifts the line until the lowest '
+      'body touches the floor', () {
+    for (final screen in screens) {
+      final free = extentOf(SceneLayout(screen, bodies: pageOrder));
+      final floor = free.bottom - free.top / 2;
+      final floored = extentOf(
+        SceneLayout(screen, bodies: pageOrder, landingFloor: floor),
+      );
+      expect(floored.bottom, nearlyEquals(floor), reason: screen.name);
+    }
+  });
+
+  test('a floor lifts the line no further than until the highest body '
+      'touches the top of the screen', () {
+    for (final screen in screens) {
+      final floored = extentOf(
+        SceneLayout(screen, bodies: pageOrder, landingFloor: 0),
+      );
+      expect(floored.top, nearlyEquals(0), reason: screen.name);
     }
   });
 }

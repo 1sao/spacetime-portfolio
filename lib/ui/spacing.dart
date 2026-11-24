@@ -36,6 +36,5 @@ abstract final class SiteSpacing {
   /// The space between sections.
   static const sectionGap = 88.0;
 
-  /// How much of the reading screen shows below the Landing.
-  static const peek = 116.0;
+  static const firstLineMaxWidth = 480.0;
 }

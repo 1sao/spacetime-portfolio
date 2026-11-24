@@ -3,7 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'router.dart';
 import 'ui/colours.dart';
-import 'ui/type.dart';
+import 'ui/theme.dart';
+import 'viewport/window_size.dart';
 
 /// The root widget. Expects a `ProviderScope` above it.
 class App extends ConsumerWidget {
@@ -22,14 +23,8 @@ class App extends ConsumerWidget {
       // On the web this becomes the page's theme-color.
       color: background,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: background,
-        textTheme: ThemeData(brightness: Brightness.dark).textTheme.apply(
-          fontFamily: SiteFonts.atkinson,
-          bodyColor: SiteColours.readingCream,
-          displayColor: SiteColours.lampWhite,
-        ),
+      theme: siteTheme(
+        ref.watch(windowSizeProvider.select((window) => window.widthClass)),
       ),
       routerConfig: ref.watch(routerProvider),
     );

@@ -13,11 +13,22 @@ Read `docs/architecture.md` before changing code. Its "Rules",
   may drop the verb, as Effective Dart suggests: `paused: false`.
 - A private helper that works on one value is a member of a private
   extension on that value's type: `url.isListView`, not `_isListView(url)`.
-- Use ASD-STE100 for code comments and docs.
-- Comments describe the code as it is now, never how it got there.
-- Comment only where the code is complex or does something unexpected.
-  Keep the comment short: only what a reader needs at that place. No
-  background, measurements, history or alternatives.
+- Code documents itself: names say what a value, a type or a function is,
+  and the code says how. Fix an unclear name (`licenceName`, not
+  `licence`) before you write a comment for it.
+- Comments say why, from one senior engineer to another. Use them only
+  where a complex block of logic, or code that would surprise a senior
+  Flutter engineer, needs it. Do not record requirements or design
+  decisions in comments.
+- A comment is one or two lines. Only a comment that says why the code
+  does not use the obvious approach can be longer.
+- Document classes rather than fields, variables or providers. A class
+  with a general name (`Section`, `Credit`) gets a short doc on its
+  purpose; a specific name (`StorePin`) needs none. A field gets a doc
+  only if its meaning is not clear from its name (`landingFloor`).
+- Keep a workaround in one file, with its reason next to it.
+- Complex graphics code can have short comments on what it does.
+- Comments describe the code as it is now. Use ASD-STE100.
 
 ## Commands
 
