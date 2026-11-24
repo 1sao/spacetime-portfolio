@@ -3,37 +3,37 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/scene/hole_textures.dart';
-import 'package:homepage_v2/scene/kepler_textures.dart';
-import 'package:homepage_v2/scene/looks.dart';
-import 'package:homepage_v2/scene/scene_shader.dart';
-import 'package:homepage_v2/scene/scene_view.dart';
-import 'package:homepage_v2/scene/sky_cache.dart';
-import 'package:homepage_v2/space/body.dart';
-import 'package:homepage_v2/space/body_look.dart';
-import 'package:homepage_v2/space/camera.dart';
-import 'package:homepage_v2/space/direction_and_distance.dart';
-import 'package:homepage_v2/space/frame_snapshot.dart';
-import 'package:homepage_v2/space/rgb.dart';
-import 'package:homepage_v2/space/system.dart';
+import 'package:spacetime_portfolio/scene/hole_textures.dart';
+import 'package:spacetime_portfolio/scene/kepler_textures.dart';
+import 'package:spacetime_portfolio/scene/looks.dart';
+import 'package:spacetime_portfolio/scene/scene_shader.dart';
+import 'package:spacetime_portfolio/scene/scene_view.dart';
+import 'package:spacetime_portfolio/scene/sky_cache.dart';
+import 'package:spacetime_portfolio/space/body.dart';
+import 'package:spacetime_portfolio/space/body_look.dart';
+import 'package:spacetime_portfolio/space/camera.dart';
+import 'package:spacetime_portfolio/space/direction_and_distance.dart';
+import 'package:spacetime_portfolio/space/frame_snapshot.dart';
+import 'package:spacetime_portfolio/space/rgb.dart';
+import 'package:spacetime_portfolio/space/system.dart';
 import 'package:vector_math/vector_math_64.dart' show Sphere, Vector2, Vector3;
 
 void main() {
-  // Pure colours, so each disc's pixels match exactly.
-  const holeColour = SceneShader.placeholderHoleColour;
-  const bodyColours = [
+  // Pure colors, so each disk's pixels match exactly.
+  const holeColor = SceneShader.placeholderHoleColor;
+  const bodyColors = [
     Color(0xFFFF0000),
     Color(0xFF00FF00),
     Color(0xFF0000FF),
     Color(0xFFFF00FF),
   ];
   const looks = Looks(
-    lighting: Lighting(direct: Rgb.grey(1), ambient: Rgb.grey(0), rim: 0),
+    lighting: Lighting(direct: Rgb.gray(1), ambient: Rgb.gray(0), rim: 0),
   );
-  // Large, and well off the view axis, so some discs are centred pixels
-  // away from where their spheres' centres project (see _discCentre).
-  // Apart and inside the screen, so each disc is whole. Clear of the
-  // lensing sphere, so the rays to each disc are straight.
+  // Large, and well off the view axis, so some disks are centered pixels
+  // away from where their spheres' centers project (see _diskCenter).
+  // Apart and inside the screen, so each disk is whole. Clear of the
+  // lensing sphere, so the rays to each disk are straight.
   final bodies = [
     Sphere.centerRadius(Vector3(13, 2, -10), 1.8),
     Sphere.centerRadius(Vector3(-13, -3, -2), 1.4),
@@ -50,7 +50,7 @@ void main() {
       ),
       focalLength: 420,
     ),
-    'nearer, aimed off the centre, which lands off the middle': Camera(
+    'nearer, aimed off the center, which lands off the middle': Camera(
       target: Vector3(0, 1, 0),
       fromTarget: DirectionAndDistance.of(Vector3(28, 11, -56)),
       focalLength: 420,
@@ -67,17 +67,17 @@ void main() {
     ),
   };
 
-  final discs = [
+  final disks = [
     (
       'the hole',
       Sphere.centerRadius(Vector3.zero(), holeShadowRadius),
-      holeColour,
+      holeColor,
     ),
-    for (final (i, body) in bodies.indexed) ('body $i', body, bodyColours[i]),
+    for (final (i, body) in bodies.indexed) ('body $i', body, bodyColors[i]),
   ];
 
-  /// The scene shader with [looks], a [FlatLook] of each of [bodyColours]
-  /// and the hole drawn in [holeColour].
+  /// The scene shader with [looks], a [FlatLook] of each of [bodyColors]
+  /// and the hole drawn in [holeColor].
   Future<SceneShader> sceneShader() async {
     final program = await FragmentProgram.fromAsset(sceneShaderAsset);
     final holeTextures = HoleTextures.bake(
@@ -92,7 +92,7 @@ void main() {
     final shader = SceneShader(
       program,
       looks,
-      bodies: [for (final colour in bodyColours) FlatLook(colour.rgb)],
+      bodies: [for (final color in bodyColors) FlatLook(color.rgb)],
       keplerTextures: keplerTextures,
       holeTextures: holeTextures,
       skyCache: skyCache,
@@ -111,21 +111,21 @@ void main() {
         final frame = _frame(camera, bodies);
         final pixels = await _render(shader, frame);
 
-        for (final (disc, sphere, colour) in discs) {
+        for (final (disk, sphere, color) in disks) {
           final drawn = _centroid(
             pixels,
             _screen,
-            colour,
+            color,
             // The hole is drawn inside the lensing sphere.
-            straightTo: disc == 'the hole' ? null : (camera, sphere),
+            straightTo: disk == 'the hole' ? null : (camera, sphere),
           );
-          final expected = _discCentre(camera, sphere, _screen);
-          expect(drawn, isNotNull, reason: '$name: $disc is drawn');
-          expect(expected, isNotNull, reason: '$name: $disc is in front');
+          final expected = _diskCenter(camera, sphere, _screen);
+          expect(drawn, isNotNull, reason: '$name: $disk is drawn');
+          expect(expected, isNotNull, reason: '$name: $disk is in front');
           expect(
             drawn!.distanceTo(expected!),
             lessThan(0.25),
-            reason: '$name: $disc at $drawn, expected at $expected',
+            reason: '$name: $disk at $drawn, expected at $expected',
           );
         }
       }
@@ -146,7 +146,7 @@ void main() {
         shader,
         _frame(camera, [inside, ...bodies.skip(1)]),
       );
-      expect(_centroid(pixels, _screen, bodyColours[0]), isNotNull);
+      expect(_centroid(pixels, _screen, bodyColors[0]), isNotNull);
     });
   });
 }
@@ -191,39 +191,39 @@ Future<ByteData> _render(SceneShader shader, FrameSnapshot frame) async {
   return pixels!;
 }
 
-/// Where the centre of [sphere]'s disc lands in [screen], in pixels, or
-/// null if the sphere's centre is behind the camera.
+/// Where the center of [sphere]'s disk lands in [screen], in pixels, or
+/// null if the sphere's center is behind the camera.
 ///
-/// Perspective draws a sphere off the view axis as an ellipse, centred
-/// further out than [Camera.project] puts the sphere's centre. If that
-/// centre is θ off the axis and the sphere spans α either side of it, its
+/// Perspective draws a sphere off the view axis as an ellipse, centered
+/// farther out than [Camera.project] puts the sphere's center. If that
+/// center is θ off the axis and the sphere spans α either side of it, its
 /// edges land focalLength · tan(θ ± α) from where the view axis lands, and the
-/// ellipse's centre is midway between them. For radius r at distance d,
+/// ellipse's center is midway between them. For radius r at distance d,
 /// sin α = r / d, and the midpoint works out at d² / (d² − r² sec² θ) times
-/// the projected centre's focalLength · tan θ.
-Vector2? _discCentre(Camera camera, Sphere sphere, Screen screen) {
+/// the projected center's focalLength · tan θ.
+Vector2? _diskCenter(Camera camera, Sphere sphere, Screen screen) {
   final projected = camera.project(sphere.center, screen);
   if (projected == null) return null;
   final axis = camera.targetPixel(screen);
   final off = projected - axis;
   final d2 = sphere.center.distanceToSquared(camera.position);
-  // tan θ is the projected centre's distance from the axis over focalLength.
+  // tan θ is the projected center's distance from the axis over focalLength.
   final sec2 = 1 + off.length2 / (camera.focalLength * camera.focalLength);
   return axis + off * (d2 / (d2 - sphere.radius * sphere.radius * sec2));
 }
 
-/// The mean of the centres of the pixels drawn in [colour], or null if
+/// The mean of the centers of the pixels drawn in [color], or null if
 /// there are none. With [straightTo], only the pixels whose straight rays
 /// from the camera reach the sphere before the lensing sphere count: the
-/// bent rays can show images of the bodies round the hole.
+/// bent rays can show images of the bodies around the hole.
 Vector2? _centroid(
   ByteData pixels,
   Screen screen,
-  Color colour, {
+  Color color, {
   (Camera, Sphere)? straightTo,
 }) {
   int byte(double channel) => (channel * 255).round();
-  final (r, g, b) = (byte(colour.r), byte(colour.g), byte(colour.b));
+  final (r, g, b) = (byte(color.r), byte(color.g), byte(color.b));
   final width = screen.width.toInt();
 
   final sum = Vector2.zero();
@@ -250,9 +250,9 @@ extension on Camera {
   /// lensing sphere.
   bool reachesFirst(Sphere sphere, Vector2 pixel, Screen screen) {
     final direction = rayThrough(pixel, screen);
-    double? entry(Vector3 centre, double radius) {
-      final along = (centre - position).dot(direction);
-      final miss2 = (centre - position).length2 - along * along;
+    double? entry(Vector3 center, double radius) {
+      final along = (center - position).dot(direction);
+      final miss2 = (center - position).length2 - along * along;
       if (along <= 0 || miss2 >= radius * radius) return null;
       return along - math.sqrt(radius * radius - miss2);
     }

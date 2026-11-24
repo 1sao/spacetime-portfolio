@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-/// The site's colours.
-abstract final class SiteColours {
+/// The site's colors.
+abstract final class SiteColors {
   /// The page and the scene's background.
   static const deepSpace = Color(0xFF05060A);
 
@@ -30,7 +30,7 @@ abstract final class SiteColours {
   static const softCream = Color(0xFFCFC4AB);
 
   /// Labels, meta lines and title descriptors.
-  static const dialGrey = Color(0xFFA99D84);
+  static const dialGray = Color(0xFFA99D84);
 
   /// The drag hint and the captions with device mocks: the lowest text
   /// tone.

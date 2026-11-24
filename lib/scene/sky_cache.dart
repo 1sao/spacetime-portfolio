@@ -6,7 +6,7 @@ import 'checked_uniforms.dart';
 const skyCacheAsset = 'shaders/sky_cache.frag';
 
 /// The sky, baked by `shaders/sky_cache.frag` at a fixed set of
-/// directions: each face of a cube round the camera is split into cells,
+/// directions: each face of a cube around the camera is split into cells,
 /// and each cell gives one direction and one pixel of the image.
 class SkyCache {
   SkyCache(this._program);

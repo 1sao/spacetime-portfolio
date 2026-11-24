@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/ui/reading/heading.dart';
+import 'package:spacetime_portfolio/ui/reading/heading.dart';
 
 void main() {
   testWidgets('a heading tells screen readers its level', (tester) async {

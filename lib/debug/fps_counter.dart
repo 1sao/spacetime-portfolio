@@ -5,13 +5,9 @@ import 'package:material_ui/material_ui.dart';
 import '../scene/frame_loop.dart';
 import '../space/frame_snapshot.dart';
 
-/// The scene's frames per second, for debug builds.
-///
-/// Flutter's `PerformanceOverlay` draws nothing on the web, so this widget
-/// counts the frame snapshots that the frame loop makes. It measures the
-/// time between them in the scene's actual time, which stands still while
-/// the scene does, so a pause is not a slow frame. While the scene stands
-/// still, the counter keeps its last value.
+/// Flutter's `PerformanceOverlay` draws nothing on the web, so this counts
+/// frame snapshots. It times them in the scene's actual time, so a pause is
+/// not a slow frame.
 class FpsCounter extends ConsumerStatefulWidget {
   const FpsCounter({super.key});
 
@@ -20,19 +16,12 @@ class FpsCounter extends ConsumerStatefulWidget {
 }
 
 class _FpsCounterState extends ConsumerState<FpsCounter> {
-  /// The scene time that each value covers, in seconds.
-  static const _interval = 0.5;
+  static const _secondsPerUpdate = 0.5;
 
   ValueListenable<FrameSnapshot>? _frames;
-
-  /// The time of the last snapshot.
-  double? _lastTime;
-
-  /// The frames since [_fps] last changed.
-  int _frameCount = 0;
-
-  /// The scene time that [_frameCount] frames took, in seconds.
-  double _frameTime = 0;
+  double? _lastFrameTime;
+  int _framesSinceUpdate = 0;
+  double _secondsSinceUpdate = 0;
 
   int? _fps;
 
@@ -45,7 +34,7 @@ class _FpsCounterState extends ConsumerState<FpsCounter> {
     ) {
       _frames?.removeListener(_countFrame);
       _frames = frames..addListener(_countFrame);
-      _lastTime = null;
+      _lastFrameTime = null;
     });
   }
 
@@ -57,18 +46,18 @@ class _FpsCounterState extends ConsumerState<FpsCounter> {
 
   void _countFrame() {
     final time = _frames!.value.actualTime;
-    final lastTime = _lastTime;
-    _lastTime = time;
+    final lastTime = _lastFrameTime;
+    _lastFrameTime = time;
     // A ticker counts from zero each time it starts, so after a pause the
     // frame loop's first frame has the time of the last frame before it.
     if (lastTime == null || time <= lastTime) return;
 
-    _frameCount++;
-    _frameTime += time - lastTime;
-    if (_frameTime < _interval) return;
-    setState(() => _fps = (_frameCount / _frameTime).round());
-    _frameCount = 0;
-    _frameTime = 0;
+    _framesSinceUpdate++;
+    _secondsSinceUpdate += time - lastTime;
+    if (_secondsSinceUpdate < _secondsPerUpdate) return;
+    setState(() => _fps = (_framesSinceUpdate / _secondsSinceUpdate).round());
+    _framesSinceUpdate = 0;
+    _secondsSinceUpdate = 0;
   }
 
   @override
@@ -80,7 +69,6 @@ class _FpsCounterState extends ConsumerState<FpsCounter> {
         style: const TextStyle(
           color: Colors.white,
           fontSize: 12,
-          // All digits have the same width.
           fontFeatures: [FontFeature.tabularFigures()],
         ),
         // The hidden text of three digits sets the width, so the box and

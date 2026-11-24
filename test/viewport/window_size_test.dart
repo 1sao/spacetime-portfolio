@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/viewport/window_size.dart';
+import 'package:spacetime_portfolio/viewport/window_size.dart';
 
 void main() {
   testWidgets('when the address bar is static, WindowSize matches the '

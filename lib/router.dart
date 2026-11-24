@@ -3,8 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import 'ui/site_page.dart';
 
-/// The site is one page, at `/`. A section is a fragment of it (`/#work`),
-/// not a route. Any other path goes to `/`, with its fragment.
 final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     redirect: (_, state) => state.uri.path == SitePage.path

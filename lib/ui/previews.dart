@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../viewport/window_size.dart';
-import 'colours.dart';
+import 'colors.dart';
 import 'theme.dart';
 import 'type.dart';
 
-/// Previews a part of the reading screen on enamel, as on a phone and as on
-/// a wide window.
+/// A part of the reading screen on enamel, as on a phone and on a wide
+/// window.
 final class ReadingPreview extends MultiPreview {
   const ReadingPreview(this.group);
 
@@ -34,8 +34,8 @@ final class ReadingPreview extends MultiPreview {
   ];
 }
 
-/// Previews a whole part of the page on the page's background, in a phone
-/// and in a wide window.
+/// A part of the page on the page's background, in a phone and in a wide
+/// window.
 final class PagePreview extends MultiPreview {
   const PagePreview(this.group);
 
@@ -72,7 +72,7 @@ Widget wideWindowPage(Widget child) => _page(_wideWindow, child);
 Widget _onEnamel(WindowSize window, Widget child) => _site(
   window,
   ColoredBox(
-    color: SiteColours.enamel,
+    color: SiteColors.enamel,
     child: Padding(padding: const EdgeInsets.all(24), child: child),
   ),
 );
@@ -80,7 +80,7 @@ Widget _onEnamel(WindowSize window, Widget child) => _site(
 Widget _page(WindowSize window, Widget child) => _site(
   window,
   ColoredBox(
-    color: SiteColours.deepSpace,
+    color: SiteColors.deepSpace,
     child: SingleChildScrollView(child: child),
   ),
 );
@@ -94,8 +94,9 @@ final Future<void> _siteFonts = Future.wait([
     ('Roboto', 'AtkinsonHyperlegibleNext.ttf'),
   ])
     (FontLoader(
-      family,
-    )..addFont(rootBundle.load('packages/homepage_v2/fonts/$file'))).load(),
+          family,
+        )..addFont(rootBundle.load('packages/spacetime_portfolio/fonts/$file')))
+        .load(),
 ]);
 
 Widget _site(WindowSize window, Widget child) {

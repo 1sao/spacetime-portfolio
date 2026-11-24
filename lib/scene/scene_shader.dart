@@ -25,8 +25,8 @@ import 'sky_cache.dart';
 class SceneShader {
   /// [bodies] is the look of each body slot, in the order of
   /// [FrameSnapshot.bodies]. If [usesPlaceholders] is true, the shader
-  /// draws every body as a sphere of one colour, the hole's shadow in
-  /// [placeholderHoleColour], and black in place of the sky and the disc,
+  /// draws every body as a sphere of one color, the hole's shadow in
+  /// [placeholderHoleColor], and black in place of the sky and the disk,
   /// for the render test.
   SceneShader(
     FragmentProgram program,
@@ -58,7 +58,7 @@ class SceneShader {
          keplerTextures.surface,
          keplerTextures.noise,
          keplerTextures.detail,
-         holeTextures.discPattern,
+         holeTextures.diskPattern,
          holeTextures.path,
        ],
        _targetPixel = fragmentShader.getUniformVec2('uTargetPixel'),
@@ -71,7 +71,7 @@ class SceneShader {
        _forward = fragmentShader.getUniformVec3('uForward'),
        _right = fragmentShader.getUniformVec3('uRight'),
        _up = fragmentShader.getUniformVec3('uUp'),
-       _discAngle = fragmentShader.getSingleUniformFloat('uDiscAngle'),
+       _diskAngle = fragmentShader.getSingleUniformFloat('uDiskAngle'),
        _bodies = List.generate(
          bodySlots,
          (i) => fragmentShader.getUniformVec4('uBody$i'),
@@ -95,7 +95,7 @@ class SceneShader {
         .getSingleUniformFloat('uHoleShadowRadius')
         .set(holeShadowRadius);
     fragmentShader.getSingleUniformFloat('uLensingRadius').set(lensingRadius);
-    fragmentShader.getSingleUniformFloat('uDiscOuter').set(holeDiscOuterRadius);
+    fragmentShader.getSingleUniformFloat('uDiskOuter').set(holeDiskOuterRadius);
     fragmentShader.setHoleLook(looks.hole);
     fragmentShader.setLighting(looks.lighting);
     for (final (i, look) in _looks.indexed) {
@@ -106,7 +106,7 @@ class SceneShader {
         .set(usesPlaceholders ? 1 : 0);
     fragmentShader
         .getUniformVec3('uPlaceholderHole')
-        .setColour(placeholderHoleColour);
+        .setColor(placeholderHoleColor);
     fragmentShader
         .getUniformVec3('uTextureSizes')
         .set(
@@ -120,8 +120,8 @@ class SceneShader {
   /// How many bodies the shader can draw. Each body has its own uniforms.
   static const bodySlots = 4;
 
-  /// The colour of the hole's shadow when the shader draws placeholders.
-  static const placeholderHoleColour = Color(0xFFFFFFFF);
+  /// The color of the hole's shadow when the shader draws placeholders.
+  static const placeholderHoleColor = Color(0xFFFFFFFF);
 
   /// What a [Paint.shader] draws the scene with, once [set] has set this
   /// frame's uniforms.
@@ -146,12 +146,12 @@ class SceneShader {
   final UniformVec3Slot _forward;
   final UniformVec3Slot _right;
   final UniformVec3Slot _up;
-  final UniformFloatSlot _discAngle;
+  final UniformFloatSlot _diskAngle;
   final List<UniformVec4Slot> _bodies;
   final List<UniformVec4Slot> _slots;
   final List<UniformArray<UniformVec4Slot>> _lookBlocks;
 
-  /// For each body slot, how far the body is drawn from its centre if any
+  /// For each body slot, how far the body is drawn from its center if any
   /// of it is within the lensing radius, else 0. The shader looks for only
   /// these bodies along the bent paths inside the lensing sphere.
   final UniformVec4Slot _bodiesInLensingRadius;
@@ -205,7 +205,7 @@ class SceneShader {
     _right.setVector(camera.right);
     _up.setVector(camera.up);
     // Wrapped to a turn, so that a 32-bit float keeps its precision.
-    _discAngle.set((holeDiscSpinRate * frame.orbitTime) % (2 * math.pi));
+    _diskAngle.set((holeDiskSpinRate * frame.orbitTime) % (2 * math.pi));
     for (var i = 0; i < bodySlots; i++) {
       if (i < bodies.length) {
         final pose = bodies[i];
@@ -240,7 +240,7 @@ class SceneShader {
 }
 
 extension on Sphere {
-  /// Whether a body drawn up to [reach] from this sphere's centre comes
+  /// Whether a body drawn up to [reach] from this sphere's center comes
   /// within the lensing radius of the hole.
   bool isInLensingRadius(double reach) => center.length - reach < lensingRadius;
 }
@@ -254,13 +254,13 @@ extension on FragmentShader {
 
   void setHoleLook(HoleLook look) {
     getSingleUniformFloat('uPull').set(look.pull);
-    getUniformVec3('uDiscInnerColour').setRgb(look.discInnerColour);
-    getUniformVec3('uDiscOuterColour').setRgb(look.discOuterColour);
-    getSingleUniformFloat('uDiscBrightness').set(look.discBrightness);
-    getUniformVec3('uJetColour').setRgb(look.jetColour);
+    getUniformVec3('uDiskInnerColor').setRgb(look.diskInnerColor);
+    getUniformVec3('uDiskOuterColor').setRgb(look.diskOuterColor);
+    getSingleUniformFloat('uDiskBrightness').set(look.diskBrightness);
+    getUniformVec3('uJetColor').setRgb(look.jetColor);
     getSingleUniformFloat('uJetBrightness').set(look.jetBrightness);
     getSingleUniformFloat('uJetLength').set(look.jetLength);
-    getUniformVec3('uGlowColour').setRgb(look.glowColour);
+    getUniformVec3('uGlowColor').setRgb(look.glowColor);
     getUniformVec3('uTint').setRgb(look.tint);
     getUniformVec3('uContrast').setRgb(look.contrast);
   }
@@ -337,7 +337,7 @@ extension on BodyLook {
 extension _LookBlock on UniformArray<UniformVec4Slot> {
   void setLook(BodyLook look) {
     final values = switch (look) {
-      FlatLook(:final colour) => [colour.withW(0)],
+      FlatLook(:final color) => [color.withW(0)],
       RingedLook() => [
         look.base.withW(look.ringOpacity),
         look.wideBand.withW(0),
@@ -346,8 +346,8 @@ extension _LookBlock on UniformArray<UniformVec4Slot> {
         look.bandFrequencies,
         look.rim.withW(0),
         look.absorption.withW(0),
-        look.ringColour.withW(0),
-        look.ringStripeColour.withW(0),
+        look.ringColor.withW(0),
+        look.ringStripeColor.withW(0),
         look.ringLayout,
         look.ringFrequencies,
       ],
@@ -399,7 +399,7 @@ extension on List<_Vec4> {
 }
 
 extension on Rgb {
-  /// A vec4 with this colour in x, y and z, and [w] in its fourth
+  /// A vec4 with this color in x, y and z, and [w] in its fourth
   /// component.
   _Vec4 withW(double w) => (red, green, blue, w);
 }
@@ -407,16 +407,16 @@ extension on Rgb {
 extension _Vec3Values on UniformVec3Slot {
   void setVector(Vector3 vector) => set(vector.x, vector.y, vector.z);
 
-  void setColour(Color colour) => set(colour.r, colour.g, colour.b);
+  void setColor(Color color) => set(color.r, color.g, color.b);
 
-  void setRgb(Rgb colour) => set(colour.red, colour.green, colour.blue);
+  void setRgb(Rgb color) => set(color.red, color.green, color.blue);
 }
 
 extension _SphereValue on UniformVec4Slot {
-  /// Sets [sphere] as the shader reads it: its centre in xyz and its radius
+  /// Sets [sphere] as the shader reads it: its center in xyz and its radius
   /// in w.
   void setSphere(Sphere sphere) {
-    final centre = sphere.center;
-    set(centre.x, centre.y, centre.z, sphere.radius);
+    final center = sphere.center;
+    set(center.x, center.y, center.z, sphere.radius);
   }
 }

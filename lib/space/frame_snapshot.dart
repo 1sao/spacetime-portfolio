@@ -1,12 +1,8 @@
 import 'body.dart';
 import 'camera.dart';
 
-/// A single source of truth for everything that moves, at one moment. The
-/// frame loop builds one per frame.
-///
-/// Caution: the vectors of [camera] and [bodies] are mutable, and every
-/// reader of the frame shares them, so they should not be changed in
-/// place.
+/// Everything that moves, at one moment. Every reader of the frame shares
+/// its mutable vectors, so nothing changes them in place.
 class FrameSnapshot {
   FrameSnapshot({
     required this.actualTime,
@@ -17,8 +13,6 @@ class FrameSnapshot {
     required List<BodyPose> bodies,
   }) : bodies = List.unmodifiable(bodies);
 
-  /// The snapshot with [bodies] at their poses at [orbitTime] and
-  /// [spinTime].
   FrameSnapshot.of(
     List<Body> bodies, {
     required double actualTime,
@@ -38,26 +32,17 @@ class FrameSnapshot {
          ],
        );
 
-  /// The seconds that the frame loop has run: real time, which only goes
-  /// forward. It stands still while the scene does.
+  /// The seconds that the frame loop has run. It stands still while the
+  /// scene does.
   final double actualTime;
 
-  /// The clock that moves the bodies along their orbits.
-  ///
-  /// The visitor sets it, so it can go back, and it does not follow
-  /// [actualTime].
+  /// The visitor sets the two clocks, so they can go back.
   final double orbitTime;
-
-  /// The clock that turns the bodies on their axes. The visitor sets it,
-  /// as [orbitTime].
   final double spinTime;
 
-  /// The scene's screen, which [camera] is made for.
   final Screen screen;
-
-  /// Where the scene is seen from.
   final Camera camera;
 
-  /// Each section's body, in page order.
+  /// In page order.
   final List<BodyPose> bodies;
 }

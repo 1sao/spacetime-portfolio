@@ -7,7 +7,7 @@
 // License: MIT
 //
 // Changed for this project: a function of a direction instead of a full
-// shader, a fixed origin and a direction lattice. The full licence text is
+// shader, a fixed origin and a direction lattice. The full license text is
 // in LICENSES/star-nest.txt.
 
 // The sky: a nebula with stars, the same in every frame for a direction.
@@ -55,7 +55,7 @@ const float tileSize = 0.85;
 const float skyBrightness = 0.0015;
 // How much the empty parts of the fractal dim the samples behind them.
 const float darkMatter = 0.3;
-// 1 keeps the colours, 0 makes them grey.
+// 1 keeps the colors, 0 makes them gray.
 const float skySaturation = 0.85;
 
 // Where every ray starts in the fractal. A different origin gives a
@@ -66,7 +66,7 @@ const vec3 skyOrigin = vec3(0.674, 0.425, 0.176);
 // blue. direction has length 1.
 vec3 starNest(vec3 origin, vec3 direction) {
   // depth goes from 0.1 to 2.0 in steps of skyStepLength. The sample is
-  // depth / 2 along the ray, and depth also gives the sample its colour.
+  // depth / 2 along the ray, and depth also gives the sample its color.
   float depth = 0.1;
   float fade = 1.0;
   vec3 light = vec3(0.0);
@@ -114,7 +114,7 @@ vec3 starNest(vec3 origin, vec3 direction) {
     if (sampleIndex > 6) fade *= 1.0 - darkness;
 
     // A faint glow from every sample, and the sample's own light. Its
-    // colour comes from its depth: red, green and blue are depth, depth²
+    // color comes from its depth: red, green and blue are depth, depth²
     // and depth⁴, so near samples are red and far ones blue.
     light += fade;
     light += vec3(depth, depth * depth, depth * depth * depth * depth) *
@@ -123,7 +123,7 @@ vec3 starNest(vec3 origin, vec3 direction) {
     fade *= fadePerStep;
     depth += skyStepLength;
   }
-  // Mix with a grey that has the length of light, √(r² + g² + b²), in each
+  // Mix with a gray that has the length of light, √(r² + g² + b²), in each
   // channel (see skySaturation).
   light = mix(vec3(length(light)), light, skySaturation);
   return light * 0.01;

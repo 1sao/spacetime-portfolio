@@ -24,12 +24,9 @@ class SceneLayout {
   /// may reach.
   final double landingFloor;
 
-  /// Whether the Landing's line of bodies stands upright, in page order
-  /// from the top. On a phone held upright, a column leaves the bodies
-  /// larger.
-  bool get isColumn => widthClass == WidthClass.compact;
+  /// On a phone held upright, a column leaves the bodies larger.
+  bool get isLandingColumn => widthClass == WidthClass.compact;
 
-  /// The camera of the Landing, which shows the whole system.
   Camera get landingCamera => _landingCameraAt(landingScreenPoint);
 
   Camera _landingCameraAt(Vector2 screenPoint) => Camera(
@@ -40,19 +37,18 @@ class SceneLayout {
     roll: landingRoll,
   );
 
-  /// Where the hole lands on the Landing, as fractions of the screen,
-  /// moved up so that nothing reaches below [landingFloor].
+  /// Moved up so that nothing reaches below [landingFloor].
   late final Vector2 landingScreenPoint = () {
-    final point = isColumn ? Vector2(0.3, 0.36) : Vector2(0.5, 0.32);
+    final point = isLandingColumn ? Vector2(0.3, 0.36) : Vector2(0.5, 0.32);
     final camera = _landingCameraAt(point);
     var (top, bottom) = (double.infinity, double.negativeInfinity);
-    final discs = [
+    final disks = [
       (Vector3.zero(), holeShadowRadius),
       for (final body in bodies) (body.positionAt(0), body.reach),
     ];
-    for (final (centre, radius) in discs) {
-      final pixel = camera.project(centre, screen)!;
-      final pixelRadius = camera.projectedRadius(centre, radius);
+    for (final (center, radius) in disks) {
+      final pixel = camera.project(center, screen)!;
+      final pixelRadius = camera.projectedRadius(center, radius);
       top = math.min(top, pixel.y - pixelRadius);
       bottom = math.max(bottom, pixel.y + pixelRadius);
     }
@@ -62,30 +58,23 @@ class SceneLayout {
     return Vector2(point.x, point.y - lift / screen.height);
   }();
 
-  /// The Landing camera's roll: a quarter turn makes the line a column.
-  double get landingRoll => isColumn ? math.pi / 2 : 0;
+  double get landingRoll => isLandingColumn ? math.pi / 2 : 0;
 
-  /// The Landing's focal length, in logical pixels.
-  double get landingFocalLength => isColumn
+  double get landingFocalLength => isLandingColumn
       ? math.min(screen.height * 0.56, screen.width * 1.6)
       : defaultFocalLength;
 
-  /// The focal length of the sections, and of the Landing when it is a
-  /// row, in logical pixels.
   double get defaultFocalLength {
-    final lineFractionOfWidth = isColumn ? 0.8 : 0.84;
+    final lineFractionOfWidth = isLandingColumn ? 0.8 : 0.84;
     return math.min(
       screen.width * lineFractionOfWidth / _lineLengthPerFocalLength,
       screen.height * 1.9,
     );
   }
 
-  /// The focal length that the sky's lattice is made for: the shortest of
-  /// this layout's, so that every cell gets a pixel in every framing, and
-  /// the sky is not baked again when the camera moves between them.
+  /// The shortest of this layout's, so that every sky cell gets a pixel in
+  /// every framing, and the sky is not baked again between framings.
   double get skyFocalLength => math.min(landingFocalLength, defaultFocalLength);
 }
 
-/// How long the line of the bodies' start points is on the screen, as seen
-/// from the Landing camera, for each pixel of focal length.
 const _lineLengthPerFocalLength = 0.8;

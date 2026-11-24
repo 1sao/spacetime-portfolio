@@ -1,10 +1,7 @@
-// The performance tour: the app's start-up, and the app at rest on the
-// Landing, sharp and soft. Built and run by `tool/measure_performance.dart`.
-//
-// The URL's query sets the tour: `settle` and `dwell` in seconds,
-// `segments`, the names of the segments to measure, separated by commas
-// (all if it is left out), and `wait=0`, which stops the wait for the GPU
-// after each frame. The app reads the rest of the query, such as `lensing`.
+// Built and run by `tool/measure_performance.dart`. The query sets `settle`
+// and `dwell` in seconds, `segments` (comma-separated, all if absent) and
+// `wait=0` (no GPU wait per frame). The app reads the rest, such as
+// `lensing`.
 
 import 'dart:async';
 import 'dart:convert';
@@ -14,16 +11,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:homepage_v2/app.dart';
-import 'package:homepage_v2/scene/scene_running.dart';
-import 'package:homepage_v2/scene/scene_view.dart';
+import 'package:spacetime_portfolio/app.dart';
+import 'package:spacetime_portfolio/scene/scene_running.dart';
+import 'package:spacetime_portfolio/scene/scene_view.dart';
 import 'package:web/web.dart' as web;
 
 import 'src/frame_recorder.dart';
 import 'src/frame_stats.dart';
 
-/// The frames to wait for after the shader's assets load. The shader
-/// compiles on the GPU when it first draws.
+/// The shader compiles on the GPU when it first draws.
 const _warmUpFrames = 30;
 
 final _query = Uri.base.queryParameters;
@@ -39,13 +35,11 @@ final _settle = _seconds('settle', 1);
 /// The time that each segment measures.
 final _dwell = _seconds('dwell', 2);
 
-/// The segments to measure, or null for all of them.
+/// Null measures all of them.
 final Set<String>? _segments = _query['segments']?.split(',').toSet();
 
-/// Whether the tour waits for the GPU after each frame.
 final _isGpuWaitOn = _query['wait'] != '0';
 
-/// The time since the navigation started, in ms.
 double get _sinceNavigationMs => web.window.performance.now();
 
 Future<void> main() async {
@@ -87,8 +81,6 @@ class _Tour {
 
   final _recorder = FrameRecorder();
 
-  /// Errors and other problems during the tour, apart from those of the
-  /// frame times.
   final List<String> _problems = [];
 
   /// Why the result is not valid. Empty if it is valid.
@@ -98,10 +90,8 @@ class _Tour {
   /// [_readPixel] reads.
   late final web.WebGL2RenderingContext _readbackContext;
 
-  /// Where [_readPixel] puts the pixel.
   final _pixel = Uint8List(4).toJS;
 
-  /// Adds each error of the app to [problems].
   void reportErrors() {
     final flutterOnError = FlutterError.onError;
     FlutterError.onError = (details) {
@@ -115,8 +105,6 @@ class _Tour {
     };
   }
 
-  /// Times the first frame that the browser shows, from the event that the
-  /// engine sends then.
   void timeFirstFrame() {
     web.window.addEventListener(
       'flutter-first-frame',
@@ -163,8 +151,8 @@ class _Tour {
     await _measure('Landing soft');
   }
 
-  /// Waits for the scene to settle, then measures it as [segment], if the
-  /// query asks for it.
+  /// Waits for the scene to settle, then measures it, if the query asks for
+  /// [segment].
   Future<void> _measure(String segment) async {
     if (!(_segments?.contains(segment) ?? true)) return;
     await Future<void>.delayed(_settle);
@@ -173,14 +161,9 @@ class _Tour {
     _recorder.stop();
   }
 
-  /// Reads one pixel back from the GPU. In Chrome, a read on one WebGL
-  /// context should wait until the GPU has run the work that the page's
-  /// other contexts sent before it. In each frame, this keeps frames from
-  /// queuing ahead of the GPU, so a frame's time includes its GPU work.
-  ///
-  /// The read is on a context of its own, so that it costs the same with
-  /// CanvasKit and with skwasm. It does not wait for skwasm when skwasm
-  /// draws on a thread of its own.
+  /// A read on its own WebGL context waits for the GPU work that the page's
+  /// other contexts sent, so a frame's time includes it. It does not wait
+  /// for skwasm on a thread of its own.
   void _readPixel() => _readbackContext.readPixels(
     0,
     0,
@@ -191,8 +174,7 @@ class _Tour {
     _pixel,
   );
 
-  /// The bytes that the page has downloaded, headers included. Files that a
-  /// worker downloads are not in the page's list.
+  /// Files that a worker downloads are not in the page's list.
   int get _downloadedBytes {
     final performance = web.window.performance;
     return [
@@ -235,7 +217,6 @@ class _Tour {
 }
 
 extension on SchedulerBinding {
-  /// Completes when [count] more frames have ended.
   Future<void> endOfFrames(int count) async {
     for (var frame = 0; frame < count; frame++) {
       await endOfFrame;

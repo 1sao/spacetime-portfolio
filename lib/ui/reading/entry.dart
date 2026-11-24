@@ -16,7 +16,6 @@ class Entry extends StatelessWidget {
   });
 
   final String title;
-
   final String details;
   final List<Widget> children;
 

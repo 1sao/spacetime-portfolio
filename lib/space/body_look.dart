@@ -6,15 +6,15 @@ import 'rgb.dart';
 sealed class BodyLook {
   const BodyLook();
 
-  /// How far from the body's centre the look draws, in body radii.
+  /// How far from the body's center the look draws, in body radii.
   double get reachInRadii;
 }
 
-/// A sphere of one colour, without light: a placeholder for tests.
+/// A sphere of one color, without light: a placeholder for tests.
 final class FlatLook extends BodyLook {
-  const FlatLook(this.colour);
+  const FlatLook(this.color);
 
-  final Rgb colour;
+  final Rgb color;
 
   @override
   double get reachInRadii => 1;
@@ -24,24 +24,24 @@ final class FlatLook extends BodyLook {
 /// (`shaders/planet_ringed.glsl`).
 final class RingedLook extends BodyLook {
   const RingedLook({
-    this.base = const Rgb.grey(0.8),
+    this.base = const Rgb.gray(0.8),
     this.wideBand = const Rgb(0.7, 0.7, 0.8),
     this.thinBand = const Rgb(0.75, 0.7, 0.8),
-    this.darkBand = const Rgb.grey(0.2),
+    this.darkBand = const Rgb.gray(0.2),
     this.bandFrequencies = (20, 14, 21, 13),
     this.rim = const Rgb(0, 0, 0.5),
     this.absorption = const Rgb(0.3, 0.25, 0.15),
-    this.ringColour = const Rgb(1, 0.8, 0.75),
-    this.ringStripeColour = const Rgb.grey(1),
+    this.ringColor = const Rgb(1, 0.8, 0.75),
+    this.ringStripeColor = const Rgb.gray(1),
     this.ringLayout = (2.2, 0.3, 0.2, 0.1),
     this.ringFrequencies = (20, 14, 21, 15),
     this.ringOpacity = 0.5,
   });
 
-  /// The planet's colour between its bands.
+  /// The planet's color between its bands.
   final Rgb base;
 
-  /// The colours of the three kinds of band: wide bands, thin bands and
+  /// The colors of the three kinds of band: wide bands, thin bands and
   /// dark belts.
   final Rgb wideBand;
   final Rgb thinBand;
@@ -51,25 +51,25 @@ final class RingedLook extends BodyLook {
   /// latitude. The third kind uses the last two frequencies together.
   final (double, double, double, double) bandFrequencies;
 
-  /// The colour added at the planet's edge.
+  /// The color added at the planet's edge.
   final Rgb rim;
 
-  /// How much of each colour the planet absorbs from the light that shines
+  /// How much of each color the planet absorbs from the light that shines
   /// through its thin edge.
   final Rgb absorption;
 
-  /// The rings' colour, and the colour of the stripes across them.
-  final Rgb ringColour;
-  final Rgb ringStripeColour;
+  /// The rings' color, and the color of the stripes across them.
+  final Rgb ringColor;
+  final Rgb ringStripeColor;
 
   /// The radius of the middle of the rings, then three widths, in planet radii.
-  /// The first width makes one band round the middle; each of the other two
+  /// The first width makes one band around the middle; each of the other two
   /// splits every band into two with a gap between them, so the rings are up to
   /// four bands. All 0: no rings.
   final (double, double, double, double) ringLayout;
 
   /// The outer edge of the rings, or the planet's surface if that is
-  /// further out. The same as `distanceToBody` in `shaders/scene.frag`.
+  /// farther out. The same as `distanceToBody` in `shaders/scene.frag`.
   @override
   double get reachInRadii {
     final (middle, first, second, third) = ringLayout;
@@ -77,7 +77,7 @@ final class RingedLook extends BodyLook {
   }
 
   /// The first three make ripples in the rings' opacity; the last one
-  /// makes the stripes of [ringStripeColour].
+  /// makes the stripes of [ringStripeColor].
   final (double, double, double, double) ringFrequencies;
 
   /// The opacity of the rings at their most opaque, seen face on. Seen
@@ -92,8 +92,8 @@ final class RingedLook extends BodyLook {
     bandFrequencies: (16, 11, 27, 5),
     rim: Rgb(0.15, 0.05, 0),
     absorption: Rgb(0.15, 0.3, 0.5),
-    ringColour: Rgb(0.9, 0.75, 0.5),
-    ringStripeColour: Rgb(0.6, 0.5, 0.4),
+    ringColor: Rgb(0.9, 0.75, 0.5),
+    ringStripeColor: Rgb(0.6, 0.5, 0.4),
     ringLayout: (2.5, 0.4, 0.25, 0.15),
     ringOpacity: 0.6,
   );
@@ -120,8 +120,8 @@ final class KeplerLook extends BodyLook {
     this.air = const Rgb(0.075 * 0.45, 0.35 * 0.45, 0.99 * 0.45),
     this.greenLand = const Rgb(0.13, 0.65, 0.01),
     this.dryLand = const Rgb(0.8, 0.4, 0.01),
-    this.polarIce = const Rgb.grey(7),
-    this.clouds = const Rgb.grey(3),
+    this.polarIce = const Rgb.gray(7),
+    this.clouds = const Rgb.gray(3),
     this.seaLevel = 0.25,
     this.dryness = 6,
     this.glint = const Rgb(3.75, 0.8, 0.02),
@@ -140,14 +140,14 @@ final class KeplerLook extends BodyLook {
   @override
   double get reachInRadii => 1.05;
 
-  /// The colour of the air and the oceans.
+  /// The color of the air and the oceans.
   final Rgb air;
 
-  /// The colour of green land and of dry land.
+  /// The color of green land and of dry land.
   final Rgb greenLand;
   final Rgb dryLand;
 
-  /// The colour of land near the poles.
+  /// The color of land near the poles.
   final Rgb polarIce;
 
   final Rgb clouds;
@@ -158,14 +158,14 @@ final class KeplerLook extends BodyLook {
   /// How much of the land is dry.
   final double dryness;
 
-  /// The colour of the glints near the edge, where the light is behind the
+  /// The color of the glints near the edge, where the light is behind the
   /// planet.
   final Rgb glint;
 
-  /// The colour of the light reflected on the oceans.
+  /// The color of the light reflected on the oceans.
   final Rgb oceanReflection;
 
-  /// The colour of the light that shines through the atmosphere when the
+  /// The color of the light that shines through the atmosphere when the
   /// light is behind the planet.
   final Rgb glare;
 

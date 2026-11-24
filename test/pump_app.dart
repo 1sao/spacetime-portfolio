@@ -3,17 +3,16 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/app.dart';
-import 'package:homepage_v2/router.dart';
-import 'package:homepage_v2/scene/scene_running.dart';
-import 'package:homepage_v2/scene/scene_view.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:spacetime_portfolio/app.dart';
+import 'package:spacetime_portfolio/router.dart';
+import 'package:spacetime_portfolio/scene/scene_running.dart';
+import 'package:spacetime_portfolio/scene/scene_view.dart';
 
 import 'fake_bodies.dart';
 
-/// Starts the app. The scene stands still unless [isSceneRunning] is true,
-/// because a running scene asks for a frame every frame, and the page then
-/// never settles.
+/// A running scene asks for a frame every frame, so the page never settles
+/// unless the scene stands still.
 Future<void> pumpApp(
   WidgetTester tester, {
   String firstUrl = '/',
@@ -47,7 +46,6 @@ Future<void> pumpApp(
 
 /// The app's state, for a test that [pumpApp] started.
 extension AppState on WidgetTester {
-  /// The URL that the router shows.
   Uri get currentUrl =>
       container().read(routerProvider).routerDelegate.currentConfiguration.uri;
 }

@@ -3,11 +3,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/scene/scene_layout_provider.dart';
-import 'package:homepage_v2/scene/scene_view.dart';
-import 'package:homepage_v2/space/system.dart';
-import 'package:homepage_v2/ui/reading_screen.dart';
-import 'package:homepage_v2/viewport/window_size.dart';
+import 'package:spacetime_portfolio/scene/scene_layout_provider.dart';
+import 'package:spacetime_portfolio/scene/scene_view.dart';
+import 'package:spacetime_portfolio/space/system.dart';
+import 'package:spacetime_portfolio/ui/reading_screen.dart';
+import 'package:spacetime_portfolio/viewport/window_size.dart';
 
 import '../pump_app.dart';
 import '../site_fonts.dart';
@@ -68,9 +68,9 @@ void main() {
       final intro = tester.getRect(_intro);
 
       for (final body in bodies.values) {
-        final centre = body.positionAt(0);
-        final pixel = camera.project(centre, layout.screen)!;
-        final radius = camera.projectedRadius(centre, body.reach);
+        final center = body.positionAt(0);
+        final pixel = camera.project(center, layout.screen)!;
+        final radius = camera.projectedRadius(center, body.reach);
         expect(pixel.x - radius, greaterThan(0), reason: reason);
         expect(pixel.x + radius, lessThan(window.width), reason: reason);
         expect(pixel.y - radius, greaterThanOrEqualTo(0), reason: reason);

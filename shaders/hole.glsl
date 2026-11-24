@@ -1,24 +1,24 @@
 // The hole's march, from "Black Hole" by nethe550
-// (https://www.shadertoy.com/view/tXsGR2), MIT licence. Shared by
+// (https://www.shadertoy.com/view/tXsGR2), MIT license. Shared by
 // scene.frag and hole_textures.frag.
 //
-// The hole works in its own units, "hole units": the disc's outer edge is
+// The hole works in its own units, "hole units": the disk's outer edge is
 // torusOuter of them. Its pull bends a ray only inside the lensing sphere,
 // and fades to nothing at the sphere's edge.
 
-// The disc's density is a torus round the hole, discFlattening times
-// thinner than it is wide. So the disc's half-thickness is
-// discHalfThickness.
-const float torusCentre = 0.8;
+// The disk's density is a torus around the hole, diskFlattening times
+// thinner than it is wide. So the disk's half-thickness is
+// diskHalfThickness.
+const float torusCenter = 0.8;
 const float torusMinor = 0.99;
-const float torusOuter = torusCentre + torusMinor;
-const float discFlattening = 25.0;
-const float discHalfThickness = torusMinor / discFlattening;
+const float torusOuter = torusCenter + torusMinor;
+const float diskFlattening = 25.0;
+const float diskHalfThickness = torusMinor / diskFlattening;
 
-// World units for each hole unit, for a disc whose outer edge is
-// discOuter world units.
-float holeUnit(float discOuter) {
-  return discOuter / torusOuter;
+// World units for each hole unit, for a disk whose outer edge is
+// diskOuter world units.
+float holeUnit(float diskOuter) {
+  return diskOuter / torusOuter;
 }
 // The march catches a ray that comes this near the hole.
 const float holeHorizon = 0.1;
@@ -39,7 +39,7 @@ const float holePi = 3.14159265358979;
 // a row for the glow it gathers. Each value is in two channels (see
 // split16 in hole_textures.frag).
 //
-// The march stores a point each time the ray has turned pathCutSweep round
+// The march stores a point each time the ray has turned pathCutSweep around
 // the hole, or gone pathCutLength, since the last point, whichever comes
 // first. It stops where the ray leaves the sphere or the hole catches it,
 // and the points after that are all that last point.

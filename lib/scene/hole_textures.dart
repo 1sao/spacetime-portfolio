@@ -11,7 +11,7 @@ const holeTexturesAsset = 'shaders/hole_textures.frag';
 /// The textures that the scene shader reads for the hole, baked by
 /// `shaders/hole_textures.frag`.
 class HoleTextures {
-  HoleTextures._(this.discPattern, this.path);
+  HoleTextures._(this.diskPattern, this.path);
 
   /// Bakes the textures with [program] for [look].
   factory HoleTextures.bake(FragmentProgram program, HoleLook look) {
@@ -22,7 +22,7 @@ class HoleTextures {
           .set(width.toDouble(), height.toDouble());
       shader.getSingleUniformFloat('uKind').set(kind.toDouble());
       shader.getSingleUniformFloat('uLensingRadius').set(lensingRadius);
-      shader.getSingleUniformFloat('uDiscOuter').set(holeDiscOuterRadius);
+      shader.getSingleUniformFloat('uDiskOuter').set(holeDiskOuterRadius);
       shader.getSingleUniformFloat('uPull').set(look.pull);
       return shader.bakeAndDispose(width, height);
     }
@@ -31,8 +31,8 @@ class HoleTextures {
     return HoleTextures._(bake(1024, 1024, 0), bake(512, 34, 1));
   }
 
-  /// The disc's pattern, which the disc turns with.
-  final Image discPattern;
+  /// The disk's pattern, which the disk turns with.
+  final Image diskPattern;
 
   /// For each distance at which a straight ray would pass the hole: where
   /// the ray goes inside the sphere in which the hole bends light, how far
@@ -40,7 +40,7 @@ class HoleTextures {
   final Image path;
 
   void dispose() {
-    discPattern.dispose();
+    diskPattern.dispose();
     path.dispose();
   }
 }

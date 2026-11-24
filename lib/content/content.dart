@@ -1,5 +1,4 @@
-/// The sections of the page, in page order. The name is the section's URL
-/// fragment: `/#work`.
+/// The sections of the page, in page order.
 enum SectionId { about, work, personal, contact, credits }
 
 /// What the reading screen and the Landing both show for a section of the
@@ -20,14 +19,12 @@ class Credit {
   const Credit({
     required this.workName,
     required this.author,
-    required this.licenceName,
-    required this.licenceFile,
+    required this.licenseName,
+    required this.licenseFile,
   });
 
   final String workName;
   final String author;
-
-  final String licenceName;
-
-  final String licenceFile;
+  final String licenseName;
+  final String licenseFile;
 }

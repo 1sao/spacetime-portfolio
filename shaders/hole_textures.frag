@@ -1,19 +1,19 @@
 #version 460 core
 #include <flutter/runtime_effect.glsl>
 #include "hole.glsl"
-#include "hole_disc.glsl"
+#include "hole_disk.glsl"
 
 // The hole's textures, baked once at load by lib/scene/hole_textures.dart:
-// uKind 0 the disc's pattern, uKind 1 the path table (see hole.glsl).
+// uKind 0 the disk's pattern, uKind 1 the path table (see hole.glsl).
 // "Black Hole" by nethe550 (https://www.shadertoy.com/view/tXsGR2), MIT
-// licence.
+// license.
 
 uniform vec2 uResolution;
 uniform float uKind;
-// The radius of the lensing sphere and of the disc's outer edge, in world
+// The radius of the lensing sphere and of the disk's outer edge, in world
 // units.
 uniform float uLensingRadius;
-uniform float uDiscOuter;
+uniform float uDiskOuter;
 // How strongly the hole pulls: the change of the ray's direction at 1 hole
 // unit from the hole, for each step.
 uniform float uPull;
@@ -35,12 +35,12 @@ void main() {
   vec2 frag = FlutterFragCoord().xy;
   if (uKind < 0.5) {
     // The pattern reaches about 1.2, so the texture holds half of it.
-    fragColor = vec4(discPattern(frag / uResolution) * 0.5, 0.0, 0.0, 1.0);
+    fragColor = vec4(diskPattern(frag / uResolution) * 0.5, 0.0, 0.0, 1.0);
     return;
   }
 
-  float sphere = uLensingRadius / holeUnit(uDiscOuter);
-  // A larger sphere has longer paths, so its points are further apart.
+  float sphere = uLensingRadius / holeUnit(uDiskOuter);
+  // A larger sphere has longer paths, so its points are farther apart.
   float cutLength = max(pathCutLength, sphere / 3.0);
   float row = floor(frag.y);
   float b = frag.x / pathColumns * sphere;
@@ -63,7 +63,7 @@ void main() {
   for (int i = 0; i < 2000; i++) {
     vec2 next = point + velocity * holeStep * speedScale;
     float stepLength = length(next - point);
-    // The angle the step sweeps round the hole, clockwise.
+    // The angle the step sweeps around the hole, clockwise.
     float sweep = atan(point.y * next.x - point.x * next.y, dot(point, next));
     // The share of the step to the next cut.
     float share = min(

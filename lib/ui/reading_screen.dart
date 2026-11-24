@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../content/content.dart';
 import '../providers.dart';
 import '../viewport/window_size.dart';
-import 'colours.dart';
+import 'colors.dart';
 import 'corners.dart';
 import 'enamel.dart';
 import 'hooks.dart';
@@ -79,7 +79,7 @@ class ReadingScreen extends HookConsumerWidget {
     }
 
     final sections = [
-      for (final section in ref.watch(contentProvider))
+      for (final section in ref.watch(sectionsProvider))
         KeyedSubtree(key: sectionKeys[section.id], child: section.id.widget),
     ];
     final cover = isLanding
@@ -142,7 +142,7 @@ class _Panel extends StatelessWidget {
                 if (index > 0) ...[
                   const SizedBox(height: SiteSpacing.sectionGap),
                   const ColoredBox(
-                    color: SiteColours.dividerLine,
+                    color: SiteColors.dividerLine,
                     child: SizedBox(height: SiteSpacing.hairline),
                   ),
                   const SizedBox(height: _dividerToHeading),
@@ -213,9 +213,8 @@ class _Selectable extends StatelessWidget {
   );
 }
 
-/// Lies over the reading screen while the Landing shows, so that a click on
-/// it goes to About and selects no text. It handles only taps, so a swipe
-/// on it still scrolls the page.
+/// A click on the peek goes to About and selects no text. The cover
+/// handles only taps, so a swipe on it still scrolls the page.
 class _LandingCover extends StatelessWidget {
   const _LandingCover({required this.onHover, required this.onTap});
 

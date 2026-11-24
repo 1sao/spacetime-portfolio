@@ -3,23 +3,23 @@
 #include "sky.glsl"
 #include "hole.glsl"
 
-// The scene: the hole with its disc, and up to four bodies, over the sky
+// The scene: the hole with its disk, and up to four bodies, over the sky
 // (sky.glsl). Each body is drawn in its own kind of look: a sphere of one
-// colour, a banded planet with or without rings (planet_ringed.glsl), or an
+// color, a banded planet with or without rings (planet_ringed.glsl), or an
 // Earth-like planet (planet_kepler.glsl).
 //
-// A fragment shader runs once for every pixel and returns that pixel's colour.
+// A fragment shader runs once for every pixel and returns that pixel's color.
 // This one casts a ray from the camera through the pixel. The ray is a chain of
 // straight pieces. A ray that enters the hole's lensing sphere has one piece to
 // the sphere, short ones along the bent path inside it (from the path table in
 // hole.glsl), and one after it; any other ray is one piece. Along the way it
-// gathers the hole's light (its disc, its jets and the glow round its shadow)
+// gathers the hole's light (its disk, its jets and the glow around its shadow)
 // and finds the first two bodies it meets. It shades them over the sky where
 // they let it through. Two, so that a body shows through the rings and soft
 // edges of the body in front of it.
 //
 // lib/scene/scene_shader.dart sets the uniforms by name. Positions and
-// lengths are in world units. Colours are red, green and blue, where 1 is
+// lengths are in world units. Colors are red, green and blue, where 1 is
 // full brightness; light can go above 1.
 
 // Where the camera's target lands, in logical pixels from the top left.
@@ -29,7 +29,7 @@ uniform vec2 uTargetPixel;
 uniform float uPixelRatio;
 // For a soft scene, which is drawn smaller and scaled up (SceneSoftness in
 // lib/scene/scene_view.dart): its size as a fraction of the window's, and the
-// border round it, in its own pixels. The border is out of the window.
+// border around it, in its own pixels. The border is out of the window.
 uniform float uScale;
 uniform float uBorder;
 // How far the camera zooms in, in logical pixels (Camera.focalLength): a
@@ -44,20 +44,20 @@ uniform vec3 uForward;
 uniform vec3 uRight;
 uniform vec3 uUp;
 // The hole: the radius of its shadow, of the sphere it bends rays in, and
-// of the disc's outer edge. The disc turns by uDiscAngle.
+// of the disk's outer edge. The disk turns by uDiskAngle.
 uniform float uHoleShadowRadius;
 uniform float uLensingRadius;
-uniform float uDiscOuter;
-uniform float uDiscAngle;
+uniform float uDiskOuter;
+uniform float uDiskAngle;
 // The hole's look (HoleLook in lib/scene/looks.dart).
 uniform float uPull;
-uniform vec3 uDiscInnerColour;
-uniform vec3 uDiscOuterColour;
-uniform float uDiscBrightness;
-uniform vec3 uJetColour;
+uniform vec3 uDiskInnerColor;
+uniform vec3 uDiskOuterColor;
+uniform float uDiskBrightness;
+uniform vec3 uJetColor;
 uniform float uJetBrightness;
 uniform float uJetLength;
-uniform vec3 uGlowColour;
+uniform vec3 uGlowColor;
 uniform vec3 uTint;
 uniform vec3 uContrast;
 // The light that the hole gives the bodies; the light that reaches every
@@ -65,9 +65,9 @@ uniform vec3 uContrast;
 uniform vec3 uLight;
 uniform vec3 uAmbient;
 uniform float uRim;
-// Each body's sphere: its centre in xyz and its radius in w. A radius of 0
+// Each body's sphere: its center in xyz and its radius in w. A radius of 0
 // leaves the slot empty. The radius is the planet's own; its rings and glow
-// go further.
+// go farther.
 uniform vec4 uBody0;
 uniform vec4 uBody1;
 uniform vec4 uBody2;
@@ -78,7 +78,7 @@ uniform vec4 uSlot0;
 uniform vec4 uSlot1;
 uniform vec4 uSlot2;
 uniform vec4 uSlot3;
-// For each slot, how far its body draws from its centre (rings and glow
+// For each slot, how far its body draws from its center (rings and glow
 // included) if that comes into the lensing sphere, else 0.
 uniform vec4 uBodiesInLensingRadius;
 // Each body's look. What each element holds depends on the kind (see
@@ -88,17 +88,17 @@ uniform vec4 uLook0[lookSize];
 uniform vec4 uLook1[lookSize];
 uniform vec4 uLook2[lookSize];
 uniform vec4 uLook3[lookSize];
-// 1 draws every body as a sphere of one colour, the first element of its
+// 1 draws every body as a sphere of one color, the first element of its
 // look, the hole's shadow in uPlaceholderHole, and black in place of the
-// sky and the disc. 0 draws the scene.
+// sky and the disk. 0 draws the scene.
 uniform float uPlaceholders;
 uniform vec3 uPlaceholderHole;
 
 #include "planet_ringed.glsl"
 #include "planet_kepler.glsl"
 
-// The disc's pattern and the path table, from hole_textures.frag.
-uniform sampler2D uDiscPattern;
+// The disk's pattern and the path table, from hole_textures.frag.
+uniform sampler2D uDiskPattern;
 uniform sampler2D uPath;
 // The sky baked by sky_cache.frag.
 uniform sampler2D uSkyCache;
@@ -120,7 +120,7 @@ vec3 cachedSky(vec3 direction) {
   return stored * stored * 2.0;
 }
 
-// The shader's output: this pixel's colour, which main() sets. Red, green,
+// The shader's output: this pixel's color, which main() sets. Red, green,
 // blue and alpha (opacity), each from 0 to 1.
 out vec4 fragColor;
 
@@ -131,25 +131,25 @@ const float keplerKind = 2.0;
 // The element of a ringed look that holds the ring layout.
 const int ringLayoutElement = 9;
 
-// What distanceToSphere returns when the ray misses: further than anything
+// What distanceToSphere returns when the ray misses: farther than anything
 // in the scene, so any hit is nearer.
 const float noHit = 1e9;
 
 // Where the line from origin along direction, which has length 1, is
-// inside the sphere with centre and radius: the distances along it to where
+// inside the sphere with center and radius: the distances along it to where
 // it goes in and out, which can be behind origin. Both are noHit if the
 // line misses the sphere.
-vec2 sphereSpan(vec3 origin, vec3 direction, vec3 centre, float radius) {
-  // How far along the line it comes nearest the sphere's centre.
-  vec3 toCentre = centre - origin;
-  float alongToNearest = dot(toCentre, direction);
-  // How near it comes, squared. The origin, the centre and that nearest
+vec2 sphereSpan(vec3 origin, vec3 direction, vec3 center, float radius) {
+  // How far along the line it comes nearest the sphere's center.
+  vec3 toCenter = center - origin;
+  float alongToNearest = dot(toCenter, direction);
+  // How near it comes, squared. The origin, the center and that nearest
   // point form a right-angled triangle, so this is Pythagoras.
   float nearestSquared =
-    dot(toCentre, toCentre) - alongToNearest * alongToNearest;
+    dot(toCenter, toCenter) - alongToNearest * alongToNearest;
   // The line is inside the sphere for the same length either side of its
   // nearest point: half the chord it cuts through the sphere, Pythagoras
-  // again. If it passes further from the centre than the radius, this is
+  // again. If it passes farther from the center than the radius, this is
   // negative and the line misses.
   float halfChordSquared = radius * radius - nearestSquared;
   if (halfChordSquared < 0.0) return vec2(noHit);
@@ -191,8 +191,8 @@ float distanceToBody(
 
   float halfWidth = ringHalfWidth(ringLayout);
   float reach = max(ringLayout.x + halfWidth, 1.0);
-  vec3 toCentre = body.xyz - origin;
-  bool isInside = length(toCentre) < body.w * reach;
+  vec3 toCenter = body.xyz - origin;
+  bool isInside = length(toCenter) < body.w * reach;
   if (
     !isInside &&
     distanceToSphere(origin, direction, vec4(body.xyz, body.w * reach)) ==
@@ -205,7 +205,7 @@ float distanceToBody(
   vec3 axis = slot.xyz;
   float across = dot(direction, axis);
   if (abs(across) < 1e-6) return planet;
-  float toPlane = dot(toCentre, axis) / across;
+  float toPlane = dot(toCenter, axis) / across;
   if (toPlane <= 0.0) return planet;
   float ringRadius = length(origin + direction * toPlane - body.xyz) / body.w;
   bool isInRings =
@@ -221,10 +221,10 @@ vec3 rayThrough(vec2 pixel) {
   return normalize(uForward + slope.x * uRight - slope.y * uUp);
 }
 
-// A body's own space, which the planets are shaded in: its centre at 0, its
+// A body's own space, which the planets are shaded in: its center at 0, its
 // axis along y, and scale units for each world unit.
 struct BodySpace {
-  vec3 centre;
+  vec3 center;
   vec3 x;
   vec3 y;
   vec3 z;
@@ -246,10 +246,10 @@ vec3 toBodyDirection(BodySpace space, vec3 direction) {
 }
 
 vec3 toBodyPoint(BodySpace space, vec3 point) {
-  return toBodyDirection(space, point - space.centre);
+  return toBodyDirection(space, point - space.center);
 }
 
-// The premultiplied colour and the coverage of the body in slot at pixel,
+// The premultiplied color and the coverage of the body in slot at pixel,
 // along the ray from origin in direction. maxDistance is where that ray
 // meets the body behind it, or noHit.
 vec4 shadeBody(
@@ -343,13 +343,13 @@ vec4 shadeBody(
     1.0 / (uFocalLength * uPixelRatio)
   );
   // Four samples in a rotated grid, in drawn pixels. In a loop, so the
-  // shading is compiled once, and neighbouring pixels, which a GPU runs in
+  // shading is compiled once, and neighboring pixels, which a GPU runs in
   // lockstep, run the same code. Each sample's ray turns from direction as
   // the camera's ray through it turns from the pixel's.
   float samples = isSmooth ? 1.0 : 4.0;
   vec2 offset1 = vec2(1.0, 3.0) / 8.0 / uPixelRatio;
   vec2 offset2 = vec2(-3.0, 1.0) / 8.0 / uPixelRatio;
-  vec3 centreRay = rayThrough(pixel);
+  vec3 centerRay = rayThrough(pixel);
   vec3 sampleOrigins[4];
   vec3 sampleDirections[4];
   for (int i = 0; i < 4; i++) {
@@ -363,8 +363,8 @@ vec4 shadeBody(
             ? offset2
             : -offset2;
     // Past the hole, origin is where the ray leaves the lensing sphere,
-    // and it moves with the turn as a neighbouring pixel's would.
-    vec3 turn = rayThrough(pixel + offset) - centreRay;
+    // and it moves with the turn as a neighboring pixel's would.
+    vec3 turn = rayThrough(pixel + offset) - centerRay;
     vec3 sampleOrigin = origin + turn * length(origin - uCamera);
     vec3 sampleDirection = normalize(direction + turn);
     sampleOrigins[i] = toBodyPoint(space, sampleOrigin) * space.scale;
@@ -400,7 +400,7 @@ vec4 shadeBody(
     );
   }
   c /= samples;
-  // The colour is premultiplied, so a channel below 0 would darken what
+  // The color is premultiplied, so a channel below 0 would darken what
   // shows behind the rings.
   return vec4(max(ringedPostProcess(c.rgb), 0.0), c.a);
 }
@@ -511,15 +511,15 @@ bool findBodies(
   return keepMeetings(nearest, next, origin, direction, front, back);
 }
 
-// Whether the piece from a to b can come within reach of the centre of
+// Whether the piece from a to b can come within reach of the center of
 // body: whether its distances from the hole overlap the body's shell.
 bool canMeet(vec3 a, vec3 b, vec4 body, float reach) {
   vec3 piece = b - a;
   float t = clamp(-dot(a, piece) / max(dot(piece, piece), 1e-12), 0.0, 1.0);
   float nearest = length(a + piece * t);
   float furthest = max(length(a), length(b));
-  float centre = length(body.xyz);
-  return nearest < centre + reach && furthest > centre - reach;
+  float center = length(body.xyz);
+  return nearest < center + reach && furthest > center - reach;
 }
 
 // As findBodies, for the piece of the bent path from a to b inside the
@@ -596,7 +596,7 @@ vec3 jetLight(vec3 a, vec3 b, float sphere) {
   float alongToAxis = aa < 1e-6 ? 0.5 * len : clamp(-bb / (2.0 * aa), 0.0, len);
   vec3 nearAxis = a + direction * alongToAxis;
   float r = length(nearAxis);
-  float jetPulse = sin(uDiscAngle * 20.0) * 0.5 + 0.5;
+  float jetPulse = sin(uDiskAngle * 20.0) * 0.5 + 0.5;
   float spread = abs(nearAxis.y * nearAxis.y * (0.00625 + jetPulse * 0.0125));
   // The integral of 1 / sqrt(d^2 + spread^2) along the piece, where d is
   // the distance from the jets' axis, in closed form.
@@ -609,15 +609,15 @@ vec3 jetLight(vec3 a, vec3 b, float sphere) {
     jets = (inverseSinh((2.0 * aa * len + bb) * scale) -
       inverseSinh(bb * scale)) * inversesqrt(aa);
   }
-  float jetLength = uJetLength / holeUnit(uDiscOuter);
+  float jetLength = uJetLength / holeUnit(uDiskOuter);
   float jetFade = smoothstep(0.0, 1.0, r - holeHorizon) *
     smoothstep(jetLength, 0.5 * jetLength, r);
-  return uJetColour *
+  return uJetColor *
     (jets * uJetBrightness * jetFade * lightPerLength(r, sphere));
 }
 
 // The hole's light along the straight piece from a to b, in hole units:
-// the disc's, and with withJets the jets'. sphere is the lensing sphere's
+// the disk's, and with withJets the jets'. sphere is the lensing sphere's
 // radius, in hole units.
 vec3 lightAlong(
   vec3 a,
@@ -632,42 +632,42 @@ vec3 lightAlong(
   float perLength = lightPerLength(length((a + b) * 0.5), sphere);
   if (withJets) light += jetLight(a, b, sphere);
 
-  // The disc: the part of the piece inside the disc's slab, with the
+  // The disk: the part of the piece inside the disk's slab, with the
   // torus's density and the pattern averaged over four points.
   float inside0 = 0.0;
   float inside1 = 1.0;
   if (abs(piece.y) > 1e-6) {
-    float t1 = (-discHalfThickness - a.y) / piece.y;
-    float t2 = (discHalfThickness - a.y) / piece.y;
+    float t1 = (-diskHalfThickness - a.y) / piece.y;
+    float t2 = (diskHalfThickness - a.y) / piece.y;
     inside0 = max(0.0, min(t1, t2));
     inside1 = min(1.0, max(t1, t2));
-  } else if (abs(a.y) > discHalfThickness) {
+  } else if (abs(a.y) > diskHalfThickness) {
     inside1 = 0.0;
   }
   if (inside1 > inside0) {
-    vec3 disc = vec3(0.0);
+    vec3 disk = vec3(0.0);
     for (int k = 0; k < 4; k++) {
       vec3 q = a + piece * mix(inside0, inside1, (float(k) + 0.5) / 4.0);
       float across = length(q.xz);
-      vec2 torus = vec2(across - torusCentre, q.y * discFlattening);
+      vec2 torus = vec2(across - torusCenter, q.y * diskFlattening);
       float density = smoothstep(0.0, 1.5, torusMinor - length(torus));
       float fromHorizon = length(q) - holeHorizon;
-      float angle = uDiscAngle - dot(q.xz, q.xz) * 0.6;
+      float angle = uDiskAngle - dot(q.xz, q.xz) * 0.6;
       float cosAngle = cos(angle);
       float sinAngle = sin(angle);
       vec2 patternPoint = vec2(
         -q.x * cosAngle + q.z * sinAngle,
         -q.x * sinAngle - q.z * cosAngle
       ) * 0.70710678118654752 * 0.5 + 0.5;
-      float pattern = texture(uDiscPattern, patternPoint).x * 2.0;
-      disc += max(
+      float pattern = texture(uDiskPattern, patternPoint).x * 2.0;
+      disk += max(
         vec3(0.0),
-        mix(uDiscInnerColour, uDiscOuterColour, fromHorizon * fromHorizon) *
+        mix(uDiskInnerColor, uDiskOuterColor, fromHorizon * fromHorizon) *
           pattern * density
       );
     }
-    light += disc *
-      (uDiscBrightness * perLength * len * (inside1 - inside0) / 4.0);
+    light += disk *
+      (uDiskBrightness * perLength * len * (inside1 - inside0) / 4.0);
   }
   return light;
 }
@@ -686,8 +686,8 @@ vec3 straightLight(
   float sphere
 ) {
   vec3 light = vec3(0.0);
-  // Only the part of the ray within the disc's reach.
-  vec2 span = sphereSpan(origin, direction, vec3(0.0), uDiscOuter);
+  // Only the part of the ray within the disk's reach.
+  vec2 span = sphereSpan(origin, direction, vec3(0.0), uDiskOuter);
   float start = max(span.x, 0.0);
   float end = min(span.y, len);
   if (end > start) {
@@ -756,7 +756,7 @@ float traceRay(
   inout vec3 frontEmission,
   out vec3 skyDirection
 ) {
-  float unit = holeUnit(uDiscOuter);
+  float unit = holeUnit(uDiskOuter);
   float sphere = uLensingRadius / unit;
   skyDirection = direction;
 
@@ -825,7 +825,7 @@ float traceRay(
   float turn = pathValue(share, turnRow) * turnLimit;
   skyDirection = cos(turn) * direction - sin(turn) * across;
   if (uPlaceholders < 0.5) {
-    emission += uGlowColour * pathValue(share, glowRow) * glowLimit;
+    emission += uGlowColor * pathValue(share, glowRow) * glowLimit;
   }
   straightPiece(point * unit, skyDirection, noHit, unit, sphere,
     front, back, emission, frontEmission);

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../viewport/window_size.dart';
-import '../colours.dart';
+import '../colors.dart';
 import '../previews.dart';
 import '../spacing.dart';
 import '../type.dart';
@@ -32,7 +32,7 @@ class LinkList extends ConsumerWidget {
 const _divider = BoxDecoration(
   border: Border(
     bottom: BorderSide(
-      color: SiteColours.enamelRim,
+      color: SiteColors.enamelRim,
       width: SiteSpacing.hairline,
     ),
   ),

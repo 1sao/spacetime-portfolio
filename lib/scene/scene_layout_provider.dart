@@ -19,12 +19,12 @@ final sceneLayoutProvider = Provider<SceneLayout>((ref) {
   );
 });
 
-/// [SceneLayout.landingFloor]. The page sets it above the Landing's text
-/// once it has laid the text out.
 final landingFloorProvider = NotifierProvider<LandingFloorNotifier, double>(
   LandingFloorNotifier.new,
 );
 
+/// The page sets the floor above the Landing's text after it lays the text
+/// out.
 class LandingFloorNotifier extends Notifier<double> {
   @override
   double build() => double.infinity;

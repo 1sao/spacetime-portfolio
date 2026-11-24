@@ -28,9 +28,9 @@ drag, titles and URL fragments do not yet move the scene.
 
 ## Rendering
 
-- **One shader draws everything:** the sky, the hole, its disc and the
+- **One shader draws everything:** the sky, the hole, its disk and the
   bodies, in a single ray march, so the hole lenses and eclipses the bodies.
-  The bending shows only near the hole. Inside a sphere round it, a ray
+  The bending shows only near the hole. Inside a sphere around it, a ray
   follows a path baked once at load into a table, by how far from the hole
   the ray would pass. The shader looks for bodies along that path too, but
   only for bodies that come into the sphere. The hole pulls a ray only
@@ -76,7 +76,7 @@ lib/
   scene/       the frame loop, the framing for the screen's size, the
                shader wrapper with its typed uniform layout, the look of
                the hole and its light
-  ui/          the page: the Landing, the reading screen, the colours and
+  ui/          the page: the Landing, the reading screen, the colors and
                the type
     sections/  one widget for each section, with its text
     reading/   the pieces that the sections are built from: headings,
@@ -88,12 +88,12 @@ lib/
   router.dart  the routes
   providers.dart
                providers for content/ and space/
-  third_party_licences.dart
-               adds the licences in LICENSES/ to Flutter's licence page
+  third_party_licenses.dart
+               adds the licenses in LICENSES/ to Flutter's license page
 shaders/       scene.frag and its includes, and the shaders that bake
                its textures
 fonts/         the two bundled fonts
-LICENSES/      the licence texts of works by other authors, one file each,
+LICENSES/      the license texts of works by other authors, one file each,
                whose first line is the name of the work
 bench/, tool/  the performance tour and its driver
 ```
@@ -111,7 +111,7 @@ can use them.
    place.
 2. **The shader and the CPU projection change together.**
    - `Camera.rayThrough` and `Camera.project` use the same straight rays
-     as the shader. The shader's bending must not show further than
+     as the shader. The shader's bending must not show farther than
      `holeLensingRadius` from the hole.
    - A render test draws the scene with flat placeholders and checks that
      the CPU projection lands on each body's pixels.
@@ -119,13 +119,13 @@ can use them.
      uniform by name and checks its type, so a mismatch throws when the
      shader loads.
    - The shader gets the camera's position, directions, focal length and
-     target pixel from Dart, so the look-at maths and the roll exist only
+     target pixel from Dart, so the look-at math and the roll exist only
      once.
 3. **Content is separate from looks.** A section's text is in its widget,
    and its id, title and descriptor are in `content/`. Where its body orbits and how it
    is drawn are settings, keyed by section id, so reordering the sections
    does not move the bodies.
-4. **Camera and time behaviour are unit-tested in pure Dart,** in `space/`,
+4. **Camera and time behavior are unit-tested in pure Dart,** in `space/`,
    with no widgets.
 
 ## Libraries and state
@@ -189,7 +189,7 @@ almost none of the site's words.
 
 - **Link previews:** `web/index.html` has a `<title>`, a description and
   Open Graph tags. `App.title` repeats the `<title>`. Tests keep the tags,
-  the manifest, the title and the background colour in agreement.
+  the manifest, the title and the background color in agreement.
 - **Page text:** a plain-HTML copy of the text in `index.html` waits for
   <https://github.com/flutter/rfc/pull/35>: hidden text breaks the browser's
   find-in-page. Any such text says only what the site says, for every
@@ -212,9 +212,9 @@ almost none of the site's words.
 
 ## Credits
 
-The site uses these works by other authors. Each one's licence text is in
-`LICENSES/`, and the site adds it to Flutter's licence page
-(`lib/third_party_licences.dart`). The Credits section lists them from
+The site uses these works by other authors. Each one's license text is in
+`LICENSES/`, and the site adds it to Flutter's license page
+(`lib/third_party_licenses.dart`). The Credits section lists them from
 `lib/content/site_content.dart`, and a test keeps that list and
 `LICENSES/` in agreement.
 
@@ -228,9 +228,9 @@ The site uses these works by other authors. Each one's licence text is in
   <https://www.shadertoy.com/view/XsjGRd>, CC0.
 - **Hash without Sine** by Dave Hoskins: the noise in the planets'
   textures. <https://www.shadertoy.com/view/4djSRW>, MIT.
-- **Black Hole** by nethe550: the hole, its disc and its jets.
+- **Black Hole** by nethe550: the hole, its disk and its jets.
   <https://www.shadertoy.com/view/tXsGR2>, MIT.
-- **webgl-noise** by Ian McEwan (Ashima Arts): the noise in the disc's
+- **webgl-noise** by Ian McEwan (Ashima Arts): the noise in the disk's
   pattern. <https://github.com/ashima/webgl-noise>, MIT.
 - **Saira** by the Saira Project Authors (Omnibus-Type): names and
   labels. <https://github.com/Omnibus-Type/Saira>, SIL OFL 1.1.

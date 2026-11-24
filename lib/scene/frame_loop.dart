@@ -7,10 +7,8 @@ import '../space/frame_snapshot.dart';
 import 'scene_layout_provider.dart';
 import 'scene_running.dart';
 
-/// The current [FrameSnapshot], as a listenable. While something watches
-/// this provider and the scene runs, a ticker replaces the snapshot each
-/// frame. The provider's own value changes only with the content or the
-/// bodies, so a painter should listen to the listenable.
+/// The provider's own value changes only with the bodies, so a painter
+/// listens to the listenable, which a ticker sets each frame.
 final frameSnapshotListenableProvider =
     Provider.autoDispose<ValueListenable<FrameSnapshot>>((ref) {
       final bodiesInPageOrder = ref.watch(bodiesInPageOrderProvider);
@@ -32,17 +30,16 @@ final frameSnapshotListenableProvider =
         layout = newLayout;
         currentFrame.value = frameAt(currentFrame.value.actualTime);
       });
-      // The actual time when the ticker last started. A started ticker
-      // counts from zero.
-      var startedAt = 0.0;
+      // A ticker counts from zero each time it starts.
+      var actualTimeAtTickerStart = 0.0;
       final ticker = Ticker((sinceStart) {
         currentFrame.value = frameAt(
-          startedAt + sinceStart.inFractionalSeconds,
+          actualTimeAtTickerStart + sinceStart.inFractionalSeconds,
         );
       });
       ref.listen(isSceneRunningProvider, fireImmediately: true, (_, isRunning) {
         if (isRunning && !ticker.isActive) {
-          startedAt = currentFrame.value.actualTime;
+          actualTimeAtTickerStart = currentFrame.value.actualTime;
           ticker.start();
         } else if (!isRunning && ticker.isActive) {
           ticker.stop();

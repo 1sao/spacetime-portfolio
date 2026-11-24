@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/ui/type.dart';
+import 'package:spacetime_portfolio/ui/type.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

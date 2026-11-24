@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:homepage_v2/ui/type.dart';
+import 'package:spacetime_portfolio/ui/type.dart';
 
 Future<void> loadSiteFonts() async {
   for (final (family, file) in [

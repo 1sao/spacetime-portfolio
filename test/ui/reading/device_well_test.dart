@@ -1,9 +1,9 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/ui/reading/device_well.dart';
-import 'package:homepage_v2/ui/theme.dart';
-import 'package:homepage_v2/viewport/window_size.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:spacetime_portfolio/ui/reading/device_well.dart';
+import 'package:spacetime_portfolio/ui/theme.dart';
+import 'package:spacetime_portfolio/viewport/window_size.dart';
 
 void main() {
   testWidgets('select all leaves out the text in a device well', (

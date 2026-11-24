@@ -25,7 +25,7 @@ class SectionFrame extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final section = ref
-        .watch(contentProvider)
+        .watch(sectionsProvider)
         .firstWhere((section) => section.id == id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

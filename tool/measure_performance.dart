@@ -2,11 +2,8 @@
 // the frame rate unlocked, unless --vsync), and prints the start-up times
 // and the frame times of each segment.
 //
-// Each --setup is a URL query for the app, such as `lensing=12`.
-// One build serves every setup, and the setups take turns, so a busy
-// moment of the machine hits each of them alike. The server sends each
-// file compressed with gzip, as a web host does, and each tour runs in a
-// new Chrome, so that nothing is cached, as on a first visit.
+// The setups take turns, so a busy moment of the machine hits each of them
+// alike. Each tour runs in a new Chrome, so nothing is cached.
 //
 // Usage: dart run tool/measure_performance.dart [--runs 3] [--no-build]
 //          [--compiler wasm|js] [--isolated] [--vsync] [--pixel-ratio 2]
@@ -37,7 +34,6 @@ const _usageError = 64;
 const _macChrome =
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-/// The longest time that one tour can take, a slow download included.
 const _tourTimeout = Duration(minutes: 3);
 
 Future<void> main(List<String> arguments) async {
@@ -289,11 +285,6 @@ Future<void> _build(String compiler, String buildDir) async {
   }
 }
 
-/// The tables of the valid tours: each segment's frame times, and the
-/// start-up times. Each cell is the median over the tours, with the
-/// smallest and the largest value in brackets. With a [baseline], a warning
-/// for each setting that differs, and the change of the median and the p90
-/// against it.
 String _report(Map<String, Object?> results, Map<String, Object?>? baseline) {
   final lines = <String>[];
   if (baseline != null) {
@@ -368,9 +359,8 @@ String _report(Map<String, Object?> results, Map<String, Object?>? baseline) {
   return lines.join('\n');
 }
 
-/// A handler for the files in [dir] that sends each file compressed with
-/// gzip, as a web host does. The files are compressed here, before the
-/// tours, so that the compression does not add to the start-up times.
+/// Sends each file gzipped, as a web host does. The files are compressed
+/// before the tours, so compression does not add to the start-up times.
 Handler _gzipHandler(String dir) {
   final staticHandler = createStaticHandler(dir, defaultDocument: 'index.html');
   final compressed = {
@@ -389,8 +379,6 @@ Handler _gzipHandler(String dir) {
 }
 
 extension on List<List<String>> {
-  /// These rows as lines of a table, with the first column on the left and
-  /// the others on the right.
   List<String> get tableLines {
     final widths = [
       for (var column = 0; column < first.length; column++)
@@ -409,8 +397,7 @@ extension on List<List<String>> {
 }
 
 extension on Handler {
-  /// This handler, with the headers that make the page cross-origin
-  /// isolated. Only an isolated page can share memory between threads.
+  /// Only a cross-origin isolated page can share memory between threads.
   Handler get isolated =>
       (request) async => (await this(request)).change(
         headers: {
@@ -421,8 +408,6 @@ extension on Handler {
 }
 
 extension on Browser {
-  /// The name of the GPU that WebGL draws with, such as
-  /// "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, ...)".
   Future<String> get renderer async {
     final page = await newPage();
     try {
@@ -437,9 +422,6 @@ extension on Browser {
     }
   }
 
-  /// Runs the tour at [url] in a new page, with the [network]'s download
-  /// speed and latency, if any. A tour that does not finish in time gives a
-  /// result with a problem.
   Future<Map<String, Object?>> runTour(
     String url, {
     required NetworkConditions? network,
@@ -450,8 +432,7 @@ extension on Browser {
         await page.devTools.network.emulateNetworkConditionsByRule([network]);
       }
       // Listens before the page loads, so the result line cannot come first.
-      // ignore(): if goto throws, the page closes and this future fails
-      // unawaited.
+      // ignore() stops an unhandled error if goto throws and the page closes.
       final result = page.tourResult..ignore();
       await page.goto(url);
       return await result;
@@ -466,7 +447,6 @@ extension on Browser {
 }
 
 extension on Page {
-  /// The result that the tour in this page prints to the console.
   Future<Map<String, Object?>> get tourResult => onConsole
       .map((message) => message.text ?? '')
       .firstWhere((text) => text.startsWith(resultPrefix))
@@ -479,7 +459,6 @@ extension on Page {
 }
 
 extension on Iterable<num> {
-  /// The median, with the smallest and the largest value in brackets.
   String spread({int digits = 2}) {
     final sorted = map((value) => value.toDouble()).toList()..sort();
     String show(double value) => value.toStringAsFixed(digits);
@@ -490,8 +469,6 @@ extension on Iterable<num> {
 }
 
 extension on List<SegmentStats> {
-  /// The change of the median frame time and of the p90 from [baseline], in
-  /// percent of the baseline. Each is the median over the tours.
   String changeFrom(List<SegmentStats> baseline) {
     if (baseline.isEmpty) return 'new';
     String percent(double Function(SegmentStats stats) stat) {
@@ -515,20 +492,16 @@ extension on Map<String, Object?> {
       tour! as Map<String, Object?>,
   ];
 
-  /// The tours that have no problems.
   List<Map<String, Object?>> get validTours => [
     for (final tour in tours)
       if ((tour['problems']! as List<Object?>).isEmpty) tour,
   ];
 
-  /// The start-up of each valid tour.
   List<StartupStats> get startups => [
     for (final tour in validTours)
       StartupStats.fromJson(tour['startup']! as Map<String, Object?>),
   ];
 
-  /// The statistics of each segment, one for each valid tour, in the order
-  /// of the first valid tour.
   Map<String, List<SegmentStats>> get segments {
     final segments = <String, List<SegmentStats>>{};
     for (final tour in validTours) {

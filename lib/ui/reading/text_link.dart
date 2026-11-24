@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/link.dart';
 
-import '../colours.dart';
+import '../colors.dart';
 import '../previews.dart';
 import '../type.dart';
 
@@ -23,10 +23,10 @@ class _TextLinkState extends State<TextLink> {
   @override
   Widget build(BuildContext context) {
     final style = context.type.body.copyWith(
-      color: SiteColours.signalAmber,
+      color: SiteColors.signalAmber,
       fontWeight: FontWeight.w600,
       decoration: TextDecoration.underline,
-      decorationColor: SiteColours.signalAmber,
+      decorationColor: SiteColors.signalAmber,
     );
     return Link(
       uri: widget.uri,
@@ -66,7 +66,7 @@ class _FocusHighlightPainter extends CustomPainter {
       const Radius.circular(3),
     ),
     Paint()
-      ..color = SiteColours.signalAmber
+      ..color = SiteColors.signalAmber
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2,
   );

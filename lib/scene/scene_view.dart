@@ -50,8 +50,6 @@ final sceneAssetsProvider = FutureProvider<SceneAssets>((ref) async {
   return SceneAssets(program, keplerTextures, holeTextures, skyCache);
 });
 
-/// The scene's shader, once its assets have loaded. An [AsyncError] if
-/// they fail to load or a uniform doesn't match.
 final sceneShaderProvider = Provider.autoDispose<AsyncValue<SceneShader>>((
   ref,
 ) {
@@ -71,33 +69,27 @@ final sceneShaderProvider = Provider.autoDispose<AsyncValue<SceneShader>>((
   });
 });
 
-/// How soft the scene is drawn: at [scale] times the window's size,
-/// blurred by [blur], and scaled up to fill the window. A soft scene costs
-/// far less to draw, and the blur hides its low resolution.
+/// A soft scene is drawn small, blurred and scaled up. It costs far less
+/// to draw, and the blur hides its low resolution.
 @immutable
 class SceneSoftness {
   const SceneSoftness({this.scale = 1, this.blur = 0})
     : assert(scale > 0 && scale <= 1 && blur >= 0);
 
-  /// The sharp scene.
   static const sharp = SceneSoftness();
 
-  /// The scene at its softest, while the visitor reads a section.
   static const soft = SceneSoftness(scale: 0.25, blur: 1.5);
 
-  /// The logical pixels of the drawn scene for each logical pixel of the
-  /// window, across and down.
+  /// The drawn scene's logical pixels for each logical pixel of the window.
   final double scale;
 
-  /// The standard deviation of the blur, in the drawn scene's logical
-  /// pixels.
+  /// The blur's sigma, in the drawn scene's logical pixels.
   final double blur;
 
   bool get isSharp => scale == 1 && blur == 0;
 
-  /// The drawn scene's border on each side, in its logical pixels, which
-  /// is out of the window. The blur reads past the edge of what is drawn,
-  /// and the border keeps the edge that this makes out of sight.
+  /// The blur reads past the edge of what is drawn; the border keeps that
+  /// edge out of the window.
   double get border => isSharp ? 0 : (3 * blur).ceilToDouble() + 1;
 
   @override
@@ -108,8 +100,6 @@ class SceneSoftness {
   int get hashCode => Object.hash(scale, blur);
 }
 
-/// The scene's softness, which can change from frame to frame. With
-/// `--dart-define=SOFT_SCENE=true`, the scene starts soft.
 final sceneSoftnessProvider = Provider<ValueNotifier<SceneSoftness>>((ref) {
   final softness = ValueNotifier(
     const bool.fromEnvironment('SOFT_SCENE')
@@ -120,8 +110,6 @@ final sceneSoftnessProvider = Provider<ValueNotifier<SceneSoftness>>((ref) {
   return softness;
 });
 
-/// The scene: the hole and the sections' bodies, drawn by the shader from
-/// the current [FrameSnapshot]. The page scrolls on top of it.
 class SceneView extends ConsumerWidget {
   const SceneView({super.key});
 
@@ -161,9 +149,6 @@ class SceneView extends ConsumerWidget {
     };
   }
 
-  /// [child], which draws the scene at [SceneSoftness.scale] times the
-  /// window's size with a [SceneSoftness.border] round it, blurred and
-  /// scaled up to the window, with the border out of the window.
   Widget _softLayer(SceneSoftness softness, Widget child) {
     final SceneSoftness(:scale, :blur, :border) = softness;
     final enlargement = 1 / scale;

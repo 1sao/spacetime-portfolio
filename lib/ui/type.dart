@@ -1,22 +1,18 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../viewport/window_size.dart';
-import 'colours.dart';
+import 'colors.dart';
 
 /// The font families that `pubspec.yaml` bundles.
 abstract final class SiteFonts {
-  /// For names, headings and labels.
   static const saira = 'Saira';
-
-  /// For reading text.
   static const atkinson = 'Atkinson Hyperlegible Next';
 }
 
-/// The site's type styles for one set of window widths. Widgets read them
-/// with `context.type`.
+/// The site's type styles for one set of window widths.
 ///
 /// A [TextStyle] cannot change the case, so the text of [roleLabel] and
-/// [listLabel] should be in uppercase already.
+/// [listLabel] is in uppercase already.
 class SiteType extends ThemeExtension<SiteType> {
   const SiteType({
     required this.ownerName,
@@ -37,47 +33,47 @@ class SiteType extends ThemeExtension<SiteType> {
           weight: 700,
           width: 115,
           letterSpacing: isCompact ? -0.17 : -0.22,
-          colour: SiteColours.lampWhite,
+          color: SiteColors.lampWhite,
         ),
         sectionHeading: _saira(
           size: isCompact ? 46 : 64,
           weight: 700,
           width: 118,
           letterSpacing: isCompact ? -0.46 : -0.64,
-          colour: SiteColours.lampWhite,
+          color: SiteColors.lampWhite,
         ),
         entryHeading: _saira(
           size: isCompact ? 25 : 30,
           weight: 650,
           width: 105,
           height: 1.2,
-          colour: SiteColours.lampWhite,
+          color: SiteColors.lampWhite,
         ),
         firstLine: _atkinson(
           size: isCompact ? 20 : 22,
           height: 1.5,
-          colour: SiteColours.lampWhite,
+          color: SiteColors.lampWhite,
         ),
         welcome: _atkinson(size: isCompact ? 17 : 19, height: 1.5),
         body: _atkinson(size: 18, height: 1.6),
         entryDetails: _atkinson(
           size: 15,
           height: 1.5,
-          colour: SiteColours.dialGrey,
+          color: SiteColors.dialGray,
         ),
         roleLabel: _saira(
           size: 15,
           weight: 600,
           height: 1.2,
           letterSpacing: 1.05,
-          colour: SiteColours.dialGrey,
+          color: SiteColors.dialGray,
         ),
         listLabel: _saira(
           size: 14,
           weight: 600,
           height: 1.2,
           letterSpacing: 0.56,
-          colour: SiteColours.dialGrey,
+          color: SiteColors.dialGray,
         ),
       );
 
@@ -87,28 +83,16 @@ class SiteType extends ThemeExtension<SiteType> {
   static SiteType of(WidthClass widthClass) =>
       widthClass == WidthClass.compact ? _compact : _standard;
 
-  /// The owner's name on the Landing.
   final TextStyle ownerName;
-
-  /// The title of a section, such as About or Work.
   final TextStyle sectionHeading;
-
-  /// The title of an entry, such as a project.
   final TextStyle entryHeading;
-
-  /// The first line of a section, larger than the reading text.
   final TextStyle firstLine;
-
-  /// The welcome sentence on the Landing.
   final TextStyle welcome;
-
-  /// Reading text.
   final TextStyle body;
 
   /// Client, years and platforms under an entry heading.
   final TextStyle entryDetails;
 
-  /// The owner's role on the Landing.
   final TextStyle roleLabel;
 
   /// The terms of a list, such as the contact list.
@@ -162,7 +146,7 @@ extension SiteTypeOfContext on BuildContext {
 TextStyle _saira({
   required double size,
   required int weight,
-  required Color colour,
+  required Color color,
   double width = 100,
   double letterSpacing = 0,
   double height = 1,
@@ -173,17 +157,17 @@ TextStyle _saira({
   fontVariations: [FontVariation.width(width)],
   letterSpacing: letterSpacing,
   height: height,
-  color: colour,
+  color: color,
 );
 
 TextStyle _atkinson({
   required double size,
   required double height,
-  Color colour = SiteColours.readingCream,
+  Color color = SiteColors.readingCream,
 }) => TextStyle(
   fontFamily: SiteFonts.atkinson,
   fontSize: size,
   fontWeight: FontWeight.w400,
   height: height,
-  color: colour,
+  color: color,
 );

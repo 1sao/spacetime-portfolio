@@ -1,7 +1,7 @@
-// The pattern of the hole's disc, from "Black Hole" by nethe550
-// (https://www.shadertoy.com/view/tXsGR2), MIT licence. Its simplex noise
+// The pattern of the hole's disk, from "Black Hole" by nethe550
+// (https://www.shadertoy.com/view/tXsGR2), MIT license. Its simplex noise
 // is Ian McEwan's (Ashima Arts, https://github.com/ashima/webgl-noise, MIT
-// licence), by way of https://github.com/hughsk/glsl-noise.
+// license), by way of https://github.com/hughsk/glsl-noise.
 // hole_textures.frag bakes it into a texture.
 
 const float ONE_OVER_289 = 1.0 / 289.0;
@@ -73,7 +73,7 @@ float fbm2(vec3 p) {
   return value + simplex(p) * 0.5;
 }
 
-// The disc's brightness at uv, a point on the disc from 0 to 1 across.
-float discPattern(vec2 uv) {
+// The disk's brightness at uv, a point on the disk from 0 to 1 across.
+float diskPattern(vec2 uv) {
   return max(0.0, fbm2(vec3(uv * 10.0, 0.0)) * 0.5 + 0.5);
 }

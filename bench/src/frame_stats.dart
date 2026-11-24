@@ -1,8 +1,7 @@
 /// The start of the tour's console line that holds its result, as JSON.
 const resultPrefix = 'PERF_RESULT ';
 
-/// One frame at 120 Hz, in ms. A frame that takes longer misses a refresh
-/// of a 120 Hz screen.
+/// A frame that takes longer misses a refresh of a 120 Hz screen.
 const frameBudgetMs = 1000 / 120;
 
 /// The frame times of one segment of the tour, such as the Landing at rest.
@@ -16,7 +15,6 @@ class SegmentStats {
     required this.slowFrames,
   });
 
-  /// The statistics of [frameTimesMs], which must not be empty.
   factory SegmentStats.of(Iterable<double> frameTimesMs) {
     final sorted = frameTimesMs.toList()..sort();
     if (sorted.isEmpty) throw ArgumentError('A segment has no frames.');
@@ -39,20 +37,12 @@ class SegmentStats {
     slowFrames: json['slowFrames']! as int,
   );
 
-  /// The number of frame times: the intervals from one frame to the next.
+  /// The number of intervals from one frame to the next.
   final int frames;
 
-  /// The mean frame time, in ms: the sum of the frame times divided by
-  /// [frames].
   final double meanMs;
-
-  /// Half of the frames take this time or less, in ms.
   final double medianMs;
-
-  /// 90 % of the frames take this time or less, in ms.
   final double p90Ms;
-
-  /// The longest frame, in ms.
   final double worstMs;
 
   /// The frames that take longer than [frameBudgetMs].
@@ -85,20 +75,17 @@ class StartupStats {
     downloadedBytes: json['downloadedBytes']! as int,
   );
 
-  /// When the app's `main` starts: the engine and the app's code have
-  /// loaded.
+  /// When the app's `main` starts.
   final double dartMs;
 
-  /// When the browser shows the app's first frame.
   final double firstFrameMs;
 
-  /// When the GPU has drawn the first frame of the scene. Null when skwasm
-  /// draws on a thread of its own, because the tour cannot wait for that
-  /// thread.
+  /// When the GPU has drawn the scene's first frame. Null when skwasm draws
+  /// on a thread of its own, which the tour cannot wait for.
   final double? sceneMs;
 
-  /// The bytes that the page downloaded until the scene was drawn, headers
-  /// included. Files that a worker downloads are not counted.
+  /// Downloaded until the scene was drawn, headers included; a worker's
+  /// files are not counted.
   final int downloadedBytes;
 
   Map<String, Object?> toJson() => {
@@ -110,8 +97,6 @@ class StartupStats {
 }
 
 extension Statistics on List<double> {
-  /// The sum of the values divided by their count. The list must not be
-  /// empty.
   double get mean => reduce((a, b) => a + b) / length;
 
   /// The smallest value that at least [fraction] of the values are less
@@ -121,7 +106,6 @@ extension Statistics on List<double> {
     return this[(rank - 1).clamp(0, length - 1)];
   }
 
-  /// The percentile at one half. For an even count, it is the lower of the
-  /// two middle values.
+  /// For an even count, the lower of the two middle values.
   double get median => percentile(0.5);
 }

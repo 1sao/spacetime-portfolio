@@ -1,25 +1,25 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'colours.dart';
+import 'colors.dart';
 import 'corners.dart';
 
 class EnamelDecoration extends Decoration {
   const EnamelDecoration({
-    required this.colour,
+    required this.color,
     required this.borderRadius,
     required this.innerShadow,
   });
 
   const EnamelDecoration.panel({required BorderRadius borderRadius})
     : this(
-        colour: SiteColours.enamel,
+        color: SiteColors.enamel,
         borderRadius: borderRadius,
         innerShadow: _highlight,
       );
 
   const EnamelDecoration.well()
     : this(
-        colour: SiteColours.enamelWell,
+        color: SiteColors.enamelWell,
         borderRadius: SiteCorners.well,
         innerShadow: _wellShadow,
       );
@@ -36,7 +36,7 @@ class EnamelDecoration extends Decoration {
     blurRadius: 8,
   );
 
-  final Color colour;
+  final Color color;
   final BorderRadius borderRadius;
   final BoxShadow innerShadow;
 
@@ -61,7 +61,7 @@ class _EnamelPainter extends BoxPainter {
     );
     final shadow = decoration.innerShadow;
     canvas
-      ..drawRRect(surface, Paint()..color = decoration.colour)
+      ..drawRRect(surface, Paint()..color = decoration.color)
       // Flutter has no inner shadow: this draws the area outside a moved
       // copy of the surface, clipped to the surface.
       ..save()
@@ -83,7 +83,7 @@ class _EnamelPainter extends BoxPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1
-          ..color = SiteColours.enamelRim,
+          ..color = SiteColors.enamelRim,
       );
   }
 }

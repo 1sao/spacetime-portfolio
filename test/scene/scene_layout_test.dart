@@ -1,12 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/content/site_content.dart';
-import 'package:homepage_v2/scene/scene_layout.dart';
-import 'package:homepage_v2/space/camera.dart';
-import 'package:homepage_v2/space/system.dart';
-import 'package:homepage_v2/ui/reading_screen.dart';
-import 'package:homepage_v2/viewport/window_size.dart';
+import 'package:spacetime_portfolio/content/site_content.dart';
+import 'package:spacetime_portfolio/scene/scene_layout.dart';
+import 'package:spacetime_portfolio/space/camera.dart';
+import 'package:spacetime_portfolio/space/system.dart';
+import 'package:spacetime_portfolio/ui/reading_screen.dart';
+import 'package:spacetime_portfolio/viewport/window_size.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import '../matchers.dart';
@@ -24,10 +24,9 @@ void main() {
     Screen(width: 844, height: 390),
   ];
 
-  /// The bodies in page order.
   final pageOrder = [for (final section in sections) ?bodies[section.id]];
 
-  final discs = [
+  final disks = [
     (Vector3.zero(), holeShadowRadius),
     for (final body in pageOrder) (body.positionAt(0), body.reach),
   ];
@@ -35,9 +34,9 @@ void main() {
   ({double top, double bottom}) extentOf(SceneLayout layout) {
     final camera = layout.landingCamera;
     var (top, bottom) = (double.infinity, double.negativeInfinity);
-    for (final (centre, reach) in discs) {
-      final y = camera.project(centre, layout.screen)!.y;
-      final radius = camera.projectedRadius(centre, reach);
+    for (final (center, reach) in disks) {
+      final y = camera.project(center, layout.screen)!.y;
+      final radius = camera.projectedRadius(center, reach);
       top = math.min(top, y - radius);
       bottom = math.max(bottom, y + radius);
     }
@@ -50,7 +49,7 @@ void main() {
       final layout = SceneLayout(screen);
       final camera = layout.landingCamera;
       final hole = camera.targetPixel(screen);
-      final along = layout.isColumn ? Vector2(0, 1) : Vector2(1, 0);
+      final along = layout.isLandingColumn ? Vector2(0, 1) : Vector2(1, 0);
       final places = <double>[];
       for (final body in pageOrder) {
         final offset = camera.project(body.positionAt(0), screen)! - hole;
@@ -65,9 +64,9 @@ void main() {
       'screen and above the top of the reading screen', () {
     for (final screen in screens) {
       final camera = SceneLayout(screen).landingCamera;
-      for (final (centre, reach) in discs) {
-        final pixel = camera.project(centre, screen)!;
-        final radius = camera.projectedRadius(centre, reach);
+      for (final (center, reach) in disks) {
+        final pixel = camera.project(center, screen)!;
+        final radius = camera.projectedRadius(center, reach);
         final reason = screen.name;
         expect(pixel.x - radius, greaterThan(0), reason: reason);
         expect(pixel.x + radius, lessThan(screen.width), reason: reason);
@@ -112,7 +111,7 @@ void main() {
     }
   });
 
-  test('a floor lifts the line no further than until the highest body '
+  test('a floor lifts the line no farther than until the highest body '
       'touches the top of the screen', () {
     for (final screen in screens) {
       final floored = extentOf(

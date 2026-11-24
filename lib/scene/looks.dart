@@ -22,7 +22,7 @@ class Lighting {
     this.rim = 1,
   });
 
-  /// The colour of the light that the hole gives the bodies.
+  /// The color of the light that the hole gives the bodies.
   final Rgb direct;
 
   /// Light that reaches every side of a body, so its night side is not
@@ -33,18 +33,18 @@ class Lighting {
   final double rim;
 }
 
-/// How the hole and its disc are drawn, from nethe550's "Black Hole"
+/// How the hole and its disk are drawn, from nethe550's "Black Hole"
 /// (`shaders/hole.glsl`). Its size is in `lib/space/system.dart`.
 class HoleLook {
   const HoleLook({
     this.pull = 0.0025,
-    this.discInnerColour = const Rgb(1, 0.8, 0.6),
-    this.discOuterColour = const Rgb(0.5, 0.46, 0.4),
-    this.discBrightness = 0.75,
-    this.jetColour = const Rgb(0.5, 0.7, 0.99),
+    this.diskInnerColor = const Rgb(1, 0.8, 0.6),
+    this.diskOuterColor = const Rgb(0.5, 0.46, 0.4),
+    this.diskBrightness = 0.75,
+    this.jetColor = const Rgb(0.5, 0.7, 0.99),
     this.jetBrightness = 0.0015,
     this.jetLength = 16,
-    this.glowColour = const Rgb(1, 0.9, 0.85),
+    this.glowColor = const Rgb(1, 0.9, 0.85),
     this.tint = const Rgb(1, 0.9, 0.85),
     this.contrast = const Rgb(1.5, 1.6, 1.7),
   });
@@ -54,28 +54,28 @@ class HoleLook {
   /// before it fades toward the edge of the sphere it bends light in. A weak
   /// pull bends the rays just outside the shadow little. A pull that is too
   /// strong catches some of them before they leave the sphere, which shows as a
-  /// ragged edge round the shadow.
+  /// ragged edge around the shadow.
   final double pull;
 
-  /// The disc's colour near the hole and further out.
-  final Rgb discInnerColour;
-  final Rgb discOuterColour;
+  /// The disk's color near the hole and farther out.
+  final Rgb diskInnerColor;
+  final Rgb diskOuterColor;
 
-  final double discBrightness;
+  final double diskBrightness;
 
-  /// The colour and brightness of the jets along the disc's axis.
-  final Rgb jetColour;
+  /// The color and brightness of the jets along the disk's axis.
+  final Rgb jetColor;
   final double jetBrightness;
 
   /// How far the jets reach from the hole, in world units. They fade out
   /// over the second half of it.
   final double jetLength;
 
-  /// The colour of the glow round the hole. Its brightness comes from the
+  /// The color of the glow around the hole. Its brightness comes from the
   /// pull.
-  final Rgb glowColour;
+  final Rgb glowColor;
 
-  /// The colour that the hole's light is multiplied by.
+  /// The color that the hole's light is multiplied by.
   final Rgb tint;
 
   /// The power that each channel of the hole's light is raised to: above

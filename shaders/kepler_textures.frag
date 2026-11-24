@@ -1,7 +1,7 @@
 #version 460 core
 // The hash functions: "Hash without Sine" by Dave Hoskins
 // https://www.shadertoy.com/view/4djSRW
-// License: MIT. The full licence text is in LICENSES/hash-without-sine.txt.
+// License: MIT. The full license text is in LICENSES/hash-without-sine.txt.
 
 // Textures for planet_kepler.glsl, baked once at load by
 // lib/scene/kepler_textures.dart. Each one tiles, and has a border of one

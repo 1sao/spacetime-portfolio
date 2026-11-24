@@ -1,4 +1,4 @@
-# homepage_v2
+# spacetime_portfolio
 
 A portfolio as one scrolling page over a live star system, in Flutter web.
 
@@ -14,8 +14,8 @@ Read `docs/architecture.md` before changing code. Its "Rules",
 - A private helper that works on one value is a member of a private
   extension on that value's type: `url.isListView`, not `_isListView(url)`.
 - Code documents itself: names say what a value, a type or a function is,
-  and the code says how. Fix an unclear name (`licenceName`, not
-  `licence`) before you write a comment for it.
+  and the code says how. Fix an unclear name (`licenseName`, not
+  `license`) before you write a comment for it.
 - Comments say why, from one senior engineer to another. Use them only
   where a complex block of logic, or code that would surprise a senior
   Flutter engineer, needs it. Do not record requirements or design

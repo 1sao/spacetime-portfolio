@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../colours.dart';
+import '../colors.dart';
 import '../enamel.dart';
 import '../previews.dart';
 import '../spacing.dart';
@@ -25,7 +25,7 @@ class DeviceWell extends StatelessWidget {
                 caption,
                 textAlign: TextAlign.center,
                 style: context.type.entryDetails.copyWith(
-                  color: SiteColours.fadedPrint,
+                  color: SiteColors.fadedPrint,
                 ),
               ),
             ),

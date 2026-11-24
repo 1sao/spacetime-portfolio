@@ -36,7 +36,7 @@ class _LandingState extends ConsumerState<Landing> {
     // The intro's height changes with the text size.
     MediaQuery.textScalerOf(context);
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _setLandingFloor(isColumn: isCompact),
+      (_) => _setLandingFloor(isLandingColumn: isCompact),
     );
 
     return SizedBox(
@@ -73,7 +73,7 @@ class _LandingState extends ConsumerState<Landing> {
     );
   }
 
-  void _setLandingFloor({required bool isColumn}) {
+  void _setLandingFloor({required bool isLandingColumn}) {
     if (!mounted) return;
     final intro = _introKey.currentContext!.findRenderObject()! as RenderBox;
     // At scroll 0 the Landing's top is the scene's top.
@@ -81,6 +81,7 @@ class _LandingState extends ConsumerState<Landing> {
         .localToGlobal(Offset.zero, ancestor: context.findRenderObject())
         .dy;
     ref.read(landingFloorProvider.notifier).floor =
-        introTop - (isColumn ? _titleSpaceBelowColumn : _titleSpaceBelowRow);
+        introTop -
+        (isLandingColumn ? _titleSpaceBelowColumn : _titleSpaceBelowRow);
   }
 }

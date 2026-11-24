@@ -12,7 +12,7 @@
 // An Earth-like planet, for scene.frag. KeplerLook in
 // lib/space/body_look.dart holds the look's values.
 //
-// The planet's space: the planet's centre is at 0, its radius is 1, and y
+// The planet's space: the planet's center is at 0, its radius is 1, and y
 // is its axis.
 
 struct Kepler {
@@ -76,7 +76,7 @@ vec3 oceanGlint(Kepler look, vec3 direction, vec3 toLight) {
 }
 
 // Where the line through origin along direction meets the sphere at the
-// centre: entry and exit, or the nearest point twice if it misses. Gives 1
+// center: entry and exit, or the nearest point twice if it misses. Gives 1
 // on a hit, and the distance of the line from the sphere's surface.
 float keplerSphere(
   float radius,
@@ -104,8 +104,8 @@ vec2 spiral(vec2 uv, float blurriness) {
   return uv + offset * blend * 1.1 * blurriness;
 }
 
-// The premultiplied colour and the coverage along the ray from origin along
-// direction, of length 1. The glow round the planet adds light, with a
+// The premultiplied color and the coverage along the ray from origin along
+// direction, of length 1. The glow around the planet adds light, with a
 // coverage of 0. light is the hole's position.
 vec4 keplerRay(Kepler look, vec3 origin, vec3 direction, vec3 light) {
   vec3 glowEntry;

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/space/camera.dart';
-import 'package:homepage_v2/space/direction_and_distance.dart';
+import 'package:spacetime_portfolio/space/camera.dart';
+import 'package:spacetime_portfolio/space/direction_and_distance.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import '../matchers.dart';
@@ -23,10 +23,8 @@ void main() {
       );
       final reason = 'elevation $elevation';
       expect(camera.fromTarget.elevation.abs(), maxElevation, reason: reason);
-      // Without the clamp, an elevation of 2 rad moves the camera over the
-      // top of the target to its far side. The direction from the target to
-      // the camera then has an azimuth a half turn from the camera's, and an
-      // elevation of π - 2 rad. These checks find that.
+      // Without the clamp, the camera goes over the top of the target, and
+      // the azimuth seen from the target is a half turn off.
       final seen = DirectionAndDistance.of(camera.position - target);
       expect(
         seen.azimuth,

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:homepage_v2/app.dart';
 import 'package:html/parser.dart' as html;
+import 'package:spacetime_portfolio/app.dart';
 
 void main() {
   final page = html.parse(File('web/index.html').readAsStringSync());
@@ -59,10 +59,10 @@ void main() {
     expect([App.title], titles);
   });
 
-  test('the page, the manifest and the app share one background colour', () {
+  test('the page, the manifest and the app share one background color', () {
     final styles = page.querySelectorAll('style').map((style) => style.text);
     final cssBackground = RegExp(r'background:\s*(#\w+)');
-    final colours = {
+    final colors = {
       'theme-color meta': metaContents('name', 'theme-color'),
       'page background': [
         for (final css in styles)
@@ -71,15 +71,17 @@ void main() {
       'manifest background_color': [manifest['background_color']],
       'manifest theme_color': [manifest['theme_color']],
     };
-    final hexRgb = (App.background.toARGB32() & 0xFFFFFF).toRadixString(16);
+    final hexRgb = (App.backgroundColor.toARGB32() & 0xFFFFFF).toRadixString(
+      16,
+    );
     final background = '#${hexRgb.padLeft(6, '0')}';
     expect(
       {
-        for (final MapEntry(key: where, value: hexes) in colours.entries)
+        for (final MapEntry(key: where, value: hexes) in colors.entries)
           where: [for (final hex in hexes) '$hex'.toLowerCase()],
       },
       {
-        for (final where in colours.keys) where: [background],
+        for (final where in colors.keys) where: [background],
       },
     );
   });

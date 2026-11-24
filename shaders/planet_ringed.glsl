@@ -9,7 +9,7 @@
 // A banded planet with rings, for scene.frag. RingedLook in
 // lib/space/body_look.dart holds the look's values.
 //
-// The planet's space: the planet's centre is at 0, its radius is
+// The planet's space: the planet's center is at 0, its radius is
 // ringedRadius, and y is its axis. The rings are in the plane y = 0.
 //
 // Two shortcuts: the rings are shaded once for each pixel, averaged over it
@@ -30,8 +30,8 @@ struct Ringed {
   vec4 bandFrequencies;
   vec3 rim;
   vec3 absorption;
-  vec3 ringColour;
-  vec3 ringStripeColour;
+  vec3 ringColor;
+  vec3 ringStripeColor;
   // The middle radius of the rings, then three widths, in the planet's
   // space.
   vec4 ringLayout;
@@ -53,7 +53,7 @@ vec3 tanh3(vec3 c) {
 }
 
 // Where the ray from origin along direction is inside a sphere at the
-// planet's centre: the distances along the ray to where it goes in and out.
+// planet's center: the distances along the ray to where it goes in and out.
 // Both are -1 if the ray misses it.
 vec2 ringedSphereSpan(vec3 origin, vec3 direction, float radius) {
   float b = dot(origin, direction);
@@ -65,7 +65,7 @@ vec2 ringedSphereSpan(vec3 origin, vec3 direction, float radius) {
   return vec2(-b - s, -b + s);
 }
 
-vec3 scaleColour(vec3 c, float s, float r) {
+vec3 scaleColor(vec3 c, float s, float r) {
   float o = sqrt(s / r);
   float i = s / o;
   return tanh3(c * i) * o;
@@ -76,8 +76,8 @@ vec3 scaleColour(vec3 c, float s, float r) {
 vec3 lightGlow(vec3 direction, vec3 toLight) {
   float diff = max(dot(direction, toLight), 0.0);
   vec3 c = vec3(0.0);
-  c += scaleColour(pow(diff, 4.0 * 200.0) * uLight, 8.0, 0.25);
-  c += scaleColour(pow(diff, 4.0 * 50.0) * uLight, 1.0, 0.25);
+  c += scaleColor(pow(diff, 4.0 * 200.0) * uLight, 8.0, 0.25);
+  c += scaleColor(pow(diff, 4.0 * 50.0) * uLight, 1.0, 0.25);
   return c;
 }
 
@@ -119,7 +119,7 @@ float averagedRipples(vec3 a, vec3 footprintAngles) {
   ) / 8.0;
 }
 
-// The colour and opacity of the rings at ringRadius from the centre,
+// The color and opacity of the rings at ringRadius from the center,
 // averaged over footprint, the width of ring plane that the pixel covers.
 // The opacity inside a band is raised to opacityPower.
 vec4 rings(
@@ -135,8 +135,8 @@ vec4 rings(
   ringDistance = abs(ringDistance) - look.ringLayout.w;
   vec4 c = vec4(1.0);
   c.rgb = mix(
-    look.ringColour,
-    look.ringStripeColour,
+    look.ringColor,
+    look.ringStripeColor,
     0.5 - 0.5 * fadedCos(
       look.ringFrequencies.w * ringRadius,
       look.ringFrequencies.w * footprint
@@ -155,7 +155,7 @@ vec4 rings(
   return c;
 }
 
-// The planet's colour where the ray hits it, from planetSpan.x to
+// The planet's color where the ray hits it, from planetSpan.x to
 // planetSpan.y along the ray. light is the hole's position.
 vec3 ringedPlanet(
   Ringed look,
@@ -172,7 +172,7 @@ vec3 ringedPlanet(
   float fresnel = pow(1.0 - abs(dot(direction, normal)), 15.0);
   float diffuse = max(dot(toLight, normal), 0.0);
   // How much of the planet the ray goes through, from 0 at the edge to 1
-  // through the centre. Light shines through where it is thin.
+  // through the center. Light shines through where it is thin.
   float thickness = (planetSpan.y - planetSpan.x) / (2.0 * ringedRadius);
   float thinness = 1.0 - smoothstep(0.2, 0.7, thickness);
   vec3 throughEdge = exp(-6.0 * look.absorption * thickness) * thinness;
@@ -198,13 +198,13 @@ vec3 ringedPlanet(
     uRim * uAmbient * edgeness;
 }
 
-// How far from the planet's centre the ray meets the ring plane.
+// How far from the planet's center the ray meets the ring plane.
 float ringPlaneRadius(vec3 origin, vec3 direction) {
   float dirY = sign(direction.y) * max(abs(direction.y), 1e-6);
   return length((origin - direction * (origin.y / dirY)).xz);
 }
 
-// The colour and opacity of the rings where the ray meets them, averaged
+// The color and opacity of the rings where the ray meets them, averaged
 // over footprint, how much the ring radius changes over the pixel. 0
 // where the ray misses them.
 vec4 ringsAlong(
@@ -237,8 +237,8 @@ vec4 ringsAlong(
   return ring;
 }
 
-// The premultiplied colour and the coverage along one ray, with ring from
-// ringsAlong for the pixel. Nothing further than maxDistance is drawn,
+// The premultiplied color and the coverage along one ray, with ring from
+// ringsAlong for the pixel. Nothing farther than maxDistance is drawn,
 // because the body there hides it.
 vec4 ringedRay(
   Ringed look,
@@ -269,7 +269,7 @@ vec3 ringedPostProcess(vec3 c) {
   return c;
 }
 
-// True where one sample gives the same colour as four: the ray hits the
+// True where one sample gives the same color as four: the ray hits the
 // planet well inside its edge, no ring is in front of it, and the fastest
 // band turns by less than a third of a radian per pixel. pixelSlope is the
 // angle of one drawn pixel, in rad.
