@@ -10,9 +10,12 @@ import 'frame_loop.dart';
 import 'hole_textures.dart';
 import 'kepler_textures.dart';
 import 'looks.dart';
+import 'opaque_surface.dart';
 import 'scene_layout_provider.dart';
+import 'scene_running.dart';
 import 'scene_shader.dart';
 import 'sky_cache.dart';
+import 'visible_rects.dart';
 
 const sceneShaderAsset = 'shaders/scene.frag';
 
@@ -100,6 +103,18 @@ class SceneSoftness {
   int get hashCode => Object.hash(scale, blur);
 }
 
+extension SoftSceneRect on Rect {
+  /// Maps this rectangle from the scene's logical pixels to those of the
+  /// scene drawn with [softness], smaller by its border on each side: the
+  /// blur reads that far into it.
+  Rect offset(SceneSoftness softness) {
+    final SceneSoftness(:scale, :border) = softness;
+    return (topLeft * scale & size * scale)
+        .shift(Offset(border, border))
+        .deflate(border);
+  }
+}
+
 final sceneSoftnessProvider = Provider<ValueNotifier<SceneSoftness>>((ref) {
   final softness = ValueNotifier(
     const bool.fromEnvironment('SOFT_SCENE')
@@ -111,11 +126,14 @@ final sceneSoftnessProvider = Provider<ValueNotifier<SceneSoftness>>((ref) {
 });
 
 class SceneView extends ConsumerWidget {
-  const SceneView({super.key});
+  const SceneView({super.key, required this.opaqueSurfaces});
+
+  final OpaqueSurfaceRegistry opaqueSurfaces;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentFrame = ref.watch(frameSnapshotListenableProvider);
+    final isRunning = ref.watch(isSceneRunningProvider);
     // Browser zoom changes it, so the sky's lattice follows the zoom.
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     final softness = ref.watch(sceneSoftnessProvider);
@@ -126,7 +144,7 @@ class SceneView extends ConsumerWidget {
       AsyncData(value: final shader) => RepaintBoundary(
         child: ValueListenableBuilder(
           valueListenable: softness,
-          builder: (context, softness, child) => _softLayer(
+          builder: (_, softness, _) => _softLayer(
             softness,
             CustomPaint(
               size: Size.infinite,
@@ -136,6 +154,9 @@ class SceneView extends ConsumerWidget {
                 pixelRatio,
                 skyFocalLength,
                 softness,
+                // The page can move over a still scene with no new frame.
+                isRunning ? opaqueSurfaces : null,
+                context,
               ),
             ),
           ),
@@ -181,6 +202,8 @@ class _ScenePainter extends CustomPainter {
     this.pixelRatio,
     this.skyFocalLength,
     this.softness,
+    this.opaqueSurfaces,
+    this.sceneContext,
   ) : super(repaint: currentFrame);
 
   final SceneShader shader;
@@ -188,6 +211,8 @@ class _ScenePainter extends CustomPainter {
   final double pixelRatio;
   final double skyFocalLength;
   final SceneSoftness softness;
+  final OpaqueSurfaceRegistry? opaqueSurfaces;
+  final BuildContext sceneContext;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -205,15 +230,25 @@ class _ScenePainter extends CustomPainter {
       scale: scale,
       border: border,
     );
-    canvas.drawRect(
-      Rect.fromLTWH(
-        0,
-        0,
-        size.width * scale + 2 * border,
-        size.height * scale + 2 * border,
-      ),
-      Paint()..shader = shader.fragmentShader,
+    final drawnArea = Rect.fromLTWH(
+      0,
+      0,
+      size.width * scale + 2 * border,
+      size.height * scale + 2 * border,
     );
+    // The surfaces' boxes are read after layout, so they are this frame's.
+    final hiddenRects =
+        opaqueSurfaces
+            ?.rectsIn(sceneContext.findRenderObject()!)
+            .map((rect) => rect.offset(softness)) ??
+        [];
+    // Without antialiasing, parts that share an edge leave no seam.
+    final paint = Paint()
+      ..shader = shader.fragmentShader
+      ..isAntiAlias = false;
+    for (final part in drawnArea.visibleRects(hiddenRects)) {
+      canvas.drawRect(part, paint);
+    }
   }
 
   @override
@@ -222,5 +257,6 @@ class _ScenePainter extends CustomPainter {
       oldDelegate.currentFrame != currentFrame ||
       oldDelegate.pixelRatio != pixelRatio ||
       oldDelegate.skyFocalLength != skyFocalLength ||
-      oldDelegate.softness != softness;
+      oldDelegate.softness != softness ||
+      oldDelegate.opaqueSurfaces != opaqueSurfaces;
 }

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../content/content.dart';
 import '../providers.dart';
+import '../scene/opaque_surface.dart';
 import '../viewport/window_size.dart';
 import 'colors.dart';
 import 'corners.dart';
@@ -19,7 +20,9 @@ import 'sections/work_section.dart';
 import 'spacing.dart';
 
 class ReadingScreen extends HookConsumerWidget {
-  const ReadingScreen({super.key});
+  const ReadingScreen({super.key, required this.opaqueSurfaces});
+
+  final OpaqueSurfaceRegistry opaqueSurfaces;
 
   static double panelLeft(double windowWidth) =>
       SiteSpacing.gutter + (0.02 * windowWidth).clamp(0.0, 32.0);
@@ -94,8 +97,18 @@ class ReadingScreen extends HookConsumerWidget {
           Transform.translate(offset: Offset(0, -rise.value), child: child),
       child: RepaintBoundary(
         child: window.widthClass == WidthClass.expanded
-            ? _Panel(window: window, sections: sections, cover: cover)
-            : _Cards(window: window, sections: sections, cover: cover),
+            ? _Panel(
+                window: window,
+                sections: sections,
+                cover: cover,
+                opaqueSurfaces: opaqueSurfaces,
+              )
+            : _Cards(
+                window: window,
+                sections: sections,
+                cover: cover,
+                opaqueSurfaces: opaqueSurfaces,
+              ),
       ),
     );
   }
@@ -106,11 +119,13 @@ class _Panel extends StatelessWidget {
     required this.window,
     required this.sections,
     required this.cover,
+    required this.opaqueSurfaces,
   });
 
   final WindowSize window;
   final List<Widget> sections;
   final Widget? cover;
+  final OpaqueSurfaceRegistry opaqueSurfaces;
 
   static const _dividerToHeading = 72.0;
 
@@ -124,16 +139,15 @@ class _Panel extends StatelessWidget {
       alignment: Alignment.topLeft,
       child: _Selectable(
         cover: cover,
-        child: Container(
+        child: _EnamelSurface(
+          opaqueSurfaceRegistry: opaqueSurfaces,
+          borderRadius: SiteCorners.screen,
           width: ReadingScreen.panelWidth(window.width),
           padding: const EdgeInsets.fromLTRB(
             SiteSpacing.readerPad,
             30,
             SiteSpacing.readerPad,
             80,
-          ),
-          decoration: const EnamelDecoration.panel(
-            borderRadius: SiteCorners.screen,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -162,11 +176,13 @@ class _Cards extends StatelessWidget {
     required this.window,
     required this.sections,
     required this.cover,
+    required this.opaqueSurfaces,
   });
 
   final WindowSize window;
   final List<Widget> sections;
   final Widget? cover;
+  final OpaqueSurfaceRegistry opaqueSurfaces;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -183,15 +199,42 @@ class _Cards extends StatelessWidget {
         spacing: 0.3 * window.smallHeight,
         children: [
           for (final section in sections)
-            Container(
+            _EnamelSurface(
+              opaqueSurfaceRegistry: opaqueSurfaces,
+              borderRadius: SiteCorners.cardPhone,
               padding: const EdgeInsets.fromLTRB(22, 26, 22, 36),
-              decoration: const EnamelDecoration.panel(
-                borderRadius: SiteCorners.cardPhone,
-              ),
               child: section,
             ),
         ],
       ),
+    ),
+  );
+}
+
+class _EnamelSurface extends StatelessWidget {
+  const _EnamelSurface({
+    required this.opaqueSurfaceRegistry,
+    required this.borderRadius,
+    this.width,
+    required this.padding,
+    required this.child,
+  });
+
+  final OpaqueSurfaceRegistry opaqueSurfaceRegistry;
+  final BorderRadius borderRadius;
+  final double? width;
+  final EdgeInsets padding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => OpaqueSurface(
+    registry: opaqueSurfaceRegistry,
+    borderRadius: borderRadius,
+    child: Container(
+      width: width,
+      padding: padding,
+      decoration: EnamelDecoration.panel(borderRadius: borderRadius),
+      child: child,
     ),
   );
 }
@@ -245,4 +288,5 @@ extension on SectionId {
 }
 
 @PagePreview('ReadingScreen')
-Widget readingScreenPreview() => const ReadingScreen();
+Widget readingScreenPreview() =>
+    ReadingScreen(opaqueSurfaces: OpaqueSurfaceRegistry());

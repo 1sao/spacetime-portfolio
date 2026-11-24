@@ -18,6 +18,7 @@ Future<void> pumpApp(
   String firstUrl = '/',
   Size? window,
   bool fakeBodies = true,
+  bool loadsScene = false,
   bool isSceneRunning = false,
   List<Override> overrides = const [],
 }) async {
@@ -31,10 +32,11 @@ Future<void> pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        // The scene never loads: drawing it on the test's CPU is very slow.
-        sceneAssetsProvider.overrideWith(
-          (ref) => Completer<SceneAssets>().future,
-        ),
+        // Drawing the scene on the test's CPU is very slow.
+        if (!loadsScene)
+          sceneAssetsProvider.overrideWith(
+            (ref) => Completer<SceneAssets>().future,
+          ),
         isSceneRunningProvider.overrideWithBuild((_, _) => isSceneRunning),
         if (fakeBodies) ...fakeOverrides,
         ...overrides,

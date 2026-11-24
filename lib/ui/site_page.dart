@@ -1,14 +1,16 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../debug/fps_counter.dart';
+import '../scene/opaque_surface.dart';
 import '../scene/scene_view.dart';
 import '../viewport/window_size.dart';
 import 'landing.dart';
 import 'reading_screen.dart';
 
-class SitePage extends ConsumerWidget {
+class SitePage extends HookConsumerWidget {
   const SitePage({super.key});
 
   static const path = '/';
@@ -16,6 +18,7 @@ class SitePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final window = ref.watch(windowSizeProvider);
+    final opaqueSurfaces = useMemoized(OpaqueSurfaceRegistry.new);
     return Scaffold(
       body: Stack(
         children: [
@@ -24,10 +27,15 @@ class SitePage extends ConsumerWidget {
             left: 0,
             right: 0,
             height: window.largeHeight,
-            child: const SceneView(),
+            child: SceneView(opaqueSurfaces: opaqueSurfaces),
           ),
-          const SingleChildScrollView(
-            child: Column(children: [Landing(), ReadingScreen()]),
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                const Landing(),
+                ReadingScreen(opaqueSurfaces: opaqueSurfaces),
+              ],
+            ),
           ),
           if (kDebugMode)
             const SafeArea(

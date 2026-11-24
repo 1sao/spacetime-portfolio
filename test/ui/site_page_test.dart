@@ -3,8 +3,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spacetime_portfolio/scene/opaque_surface.dart';
 import 'package:spacetime_portfolio/scene/scene_layout_provider.dart';
 import 'package:spacetime_portfolio/scene/scene_view.dart';
+import 'package:spacetime_portfolio/scene/visible_rects.dart';
 import 'package:spacetime_portfolio/space/system.dart';
 import 'package:spacetime_portfolio/ui/reading_screen.dart';
 import 'package:spacetime_portfolio/viewport/window_size.dart';
@@ -80,6 +82,76 @@ void main() {
         }
       }
     }
+  });
+
+  group('after a scroll', () {
+    const scrollOffset = 300.0;
+    // Small, as the test's CPU bakes the sky for the window's size.
+    const windows = {'a panel': Size(860, 480), 'cards': Size(390, 600)};
+
+    Future<void> pumpAndScroll(
+      WidgetTester tester,
+      Size window, {
+      required bool isSceneRunning,
+    }) async {
+      await pumpApp(
+        tester,
+        window: window,
+        loadsScene: true,
+        isSceneRunning: isSceneRunning,
+      );
+      // The scene's assets load outside the test's fake time.
+      await tester.runAsync(
+        () => tester.container().read(sceneAssetsProvider.future),
+      );
+      await tester.pump();
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .jumpTo(scrollOffset);
+      await tester.pump();
+    }
+
+    Finder scenePainting() => find.descendant(
+      of: find.byType(SceneView),
+      matching: find.byType(CustomPaint),
+    );
+
+    for (final MapEntry(key: name, value: window) in windows.entries) {
+      testWidgets('with $name, the running scene is drawn only outside the '
+          "opaque surfaces' inner rectangles", (tester) async {
+        await pumpAndScroll(tester, window, isSceneRunning: true);
+        final hiddenRects = [
+          for (final surface in tester.widgetList<OpaqueSurface>(
+            find.byType(OpaqueSurface),
+          ))
+            tester
+                .getRect(find.byWidget(surface))
+                .deflate(surface.borderRadius.topLeft.x),
+        ];
+        final parts = tester
+            .getRect(find.byType(SceneView))
+            .visibleRects(hiddenRects);
+        expect(parts.length, greaterThan(1));
+
+        final expected = paints;
+        for (final part in parts) {
+          expected.rect(rect: part);
+        }
+        expect(scenePainting(), expected);
+        expect(
+          scenePainting(),
+          paintsExactlyCountTimes(#drawRect, parts.length),
+        );
+      });
+    }
+
+    testWidgets('the scene that stands still is drawn in full', (tester) async {
+      await pumpAndScroll(tester, windows['cards']!, isSceneRunning: false);
+      final scene = tester.getRect(find.byType(SceneView));
+      expect(scenePainting(), paints..rect(rect: scene));
+      expect(scenePainting(), paintsExactlyCountTimes(#drawRect, 1));
+    });
   });
 
   group('the reading screen below the Landing', () {

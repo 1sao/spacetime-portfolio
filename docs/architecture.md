@@ -42,6 +42,13 @@ drag, titles and URL fragments do not yet move the scene.
   depends only on the direction. So it is taken once at a fixed set of
   directions, as many as the screen's pixels need, and the shader reads it
   from that image.
+- **The scene is not drawn under the reading screen:** each opaque
+  surface of the page (`OpaqueSurface`) gives its rectangle, without the
+  rounded corners. The scene reads them each time it paints, after layout,
+  and draws only the parts of the screen outside them. A soft scene also
+  draws a small border into them, which its blur reads. While the scene
+  stands still, the page can move over it with no new frame, so the scene
+  is then drawn in full.
 - **Framing:** in addition to its position and target, a camera has the
   point of the screen where its target lands, a roll and a focal length.
   `SceneLayout`, in `scene/`, gives these three for the scene's size, with
