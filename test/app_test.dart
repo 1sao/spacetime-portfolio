@@ -1,11 +1,12 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:spacetime_portfolio/app.dart';
 
+import 'pump_app.dart';
+
 void main() {
   testWidgets("the app starts dark, on the page's background", (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: App()));
+    await pumpApp(tester);
 
     final scaffold = find.byType(Scaffold);
     expect(Theme.of(tester.element(scaffold)).brightness, Brightness.dark);
@@ -19,7 +20,7 @@ void main() {
   testWidgets('the app gives the browser its title and background color', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: App()));
+    await pumpApp(tester);
 
     final title = tester.widget<Title>(find.byType(Title));
     expect(title.title, App.title);

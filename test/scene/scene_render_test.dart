@@ -8,7 +8,6 @@ import 'package:spacetime_portfolio/scene/kepler_textures.dart';
 import 'package:spacetime_portfolio/scene/looks.dart';
 import 'package:spacetime_portfolio/scene/scene_shader.dart';
 import 'package:spacetime_portfolio/scene/scene_view.dart';
-import 'package:spacetime_portfolio/scene/sky_cache.dart';
 import 'package:spacetime_portfolio/space/body.dart';
 import 'package:spacetime_portfolio/space/body_look.dart';
 import 'package:spacetime_portfolio/space/camera.dart';
@@ -17,6 +16,8 @@ import 'package:spacetime_portfolio/space/frame_snapshot.dart';
 import 'package:spacetime_portfolio/space/rgb.dart';
 import 'package:spacetime_portfolio/space/system.dart';
 import 'package:vector_math/vector_math_64.dart' show Sphere, Vector2, Vector3;
+
+import '../blank_scene.dart';
 
 void main() {
   // Pure colors, so each disk's pixels match exactly.
@@ -85,7 +86,8 @@ void main() {
       looks.hole,
     );
     addTearDown(holeTextures.dispose);
-    final skyCache = SkyCache(await FragmentProgram.fromAsset(skyCacheAsset));
+    // The placeholders leave the sky out, so baking it would be wasted.
+    final skyCache = BlankSky();
     addTearDown(skyCache.dispose);
     final keplerTextures = KeplerTextures.blank();
     addTearDown(keplerTextures.dispose);

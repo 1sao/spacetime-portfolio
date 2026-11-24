@@ -86,8 +86,7 @@ void main() {
 
   group('after a scroll', () {
     const scrollOffset = 300.0;
-    // Small, as the test's CPU bakes the sky for the window's size.
-    const windows = {'a panel': Size(860, 480), 'cards': Size(390, 600)};
+    const windows = {'a panel': Size(1280, 800), 'cards': Size(390, 844)};
 
     Future<void> pumpAndScroll(
       WidgetTester tester,
@@ -97,10 +96,10 @@ void main() {
       await pumpApp(
         tester,
         window: window,
-        loadsScene: true,
+        loadsBlankScene: true,
         isSceneRunning: isSceneRunning,
       );
-      // The scene's assets load outside the test's fake time.
+      // The scene's shader loads outside the test's fake time.
       await tester.runAsync(
         () => tester.container().read(sceneAssetsProvider.future),
       );
@@ -147,7 +146,7 @@ void main() {
     }
 
     testWidgets('the scene that stands still is drawn in full', (tester) async {
-      await pumpAndScroll(tester, windows['cards']!, isSceneRunning: false);
+      await pumpAndScroll(tester, windows['a panel']!, isSceneRunning: false);
       final scene = tester.getRect(find.byType(SceneView));
       expect(scenePainting(), paints..rect(rect: scene));
       expect(scenePainting(), paintsExactlyCountTimes(#drawRect, 1));
