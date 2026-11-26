@@ -1,5 +1,5 @@
-import 'body.dart';
-import 'camera.dart';
+import 'camera/camera.dart';
+import 'system/body.dart';
 
 /// Everything that moves, at one moment. Every reader of the frame shares
 /// its mutable vectors, so nothing changes them in place.

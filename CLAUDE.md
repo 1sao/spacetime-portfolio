@@ -3,7 +3,7 @@
 A portfolio as one scrolling page over a live star system, in Flutter web.
 
 Read `docs/architecture.md` before changing code. Its "Rules",
-"Libraries and state" and "Routing" sections are binding.
+"Structure", "Libraries and state" and "Routing" sections are binding.
 
 ## Conventions
 
@@ -11,6 +11,16 @@ Read `docs/architecture.md` before changing code. Its "Rules",
   a verb such as `is`, `has` or `can`: `isResumed`, not `resumed`. This is
   Effective Dart's "non-imperative verb phrase". A named boolean parameter
   may drop the verb, as Effective Dart suggests: `paused: false`.
+- One name for each concept, across types, providers, files and tests:
+  `Station`, `landingStationProvider`, `station.dart`. Do not reuse a
+  name that Flutter or a package in use exports: `Range`, not `Interval`.
+- A choice between variants is an enum or a sealed class, named for what
+  it chooses (`SectionLayout.panel`), not a boolean (`hasLandingColumn`).
+- A name says if a value is a maximum or a minimum
+  (`_minMoveInViewHeights`). Values that go together have names of one
+  pattern: `_holdScrollTimePerViewHeight` and `_moveScrollTime`.
+- A parameter that callers must think about is required. Give a default
+  only to a value that nearly every caller wants.
 - A private helper that works on one value is a member of a private
   extension on that value's type: `url.isListView`, not `_isListView(url)`.
 - Code documents itself: names say what a value, a type or a function is,
@@ -28,6 +38,8 @@ Read `docs/architecture.md` before changing code. Its "Rules",
   only if its meaning is not clear from its name (`landingFloor`).
 - Keep a workaround in one file, with its reason next to it.
 - Complex graphics code can have short comments on what it does.
+- A doc stands alone: it does not lean on the doc above it. It defines
+  its terms and units, and for a limit it says what happens past it.
 - Comments describe the code as it is now. Use ASD-STE100.
 
 ## Commands
@@ -37,5 +49,5 @@ flutter analyze
 dart format --set-exit-if-changed .
 flutter test
 flutter run -d web-server --web-port 8080
-dart run tool/measure_performance.dart   # frame times in Chrome; macOS, local only
+dart run tool/measure_performance.dart   # frame times in Chrome; macOS only
 ```

@@ -3,11 +3,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:spacetime_portfolio/scene/opaque_surface.dart';
-import 'package:spacetime_portfolio/scene/scene_layout_provider.dart';
+import 'package:spacetime_portfolio/scene/framing/landing_station.dart';
+import 'package:spacetime_portfolio/scene/framing/scene_screen.dart';
+import 'package:spacetime_portfolio/scene/render/opaque_surface.dart';
+import 'package:spacetime_portfolio/scene/render/scene_assets.dart';
+import 'package:spacetime_portfolio/scene/render/visible_rects.dart';
 import 'package:spacetime_portfolio/scene/scene_view.dart';
-import 'package:spacetime_portfolio/scene/visible_rects.dart';
-import 'package:spacetime_portfolio/space/system.dart';
+import 'package:spacetime_portfolio/space/system/system.dart';
 import 'package:spacetime_portfolio/ui/reading_screen.dart';
 import 'package:spacetime_portfolio/viewport/window_size.dart';
 
@@ -65,13 +67,14 @@ void main() {
       await tester.pump();
       await tester.pump();
       final reason = '${window.width}x${window.height}';
-      final layout = tester.container().read(sceneLayoutProvider);
-      final camera = layout.landingCamera;
+      final container = tester.container();
+      final camera = container.read(landingStationProvider).cameraAt(0);
+      final screen = container.read(sceneScreenProvider);
       final intro = tester.getRect(_intro);
 
       for (final body in bodies.values) {
         final center = body.positionAt(0);
-        final pixel = camera.project(center, layout.screen)!;
+        final pixel = camera.project(center, screen)!;
         final radius = camera.projectedRadius(center, body.reach);
         expect(pixel.x - radius, greaterThan(0), reason: reason);
         expect(pixel.x + radius, lessThan(window.width), reason: reason);

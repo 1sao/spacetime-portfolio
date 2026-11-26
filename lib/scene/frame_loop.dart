@@ -1,58 +1,50 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
+import '../space/clocks.dart';
 import '../space/frame_snapshot.dart';
-import 'scene_layout_provider.dart';
-import 'scene_running.dart';
+import 'framing/scene_screen.dart';
+import 'framing/scroll_script_provider.dart';
+import 'page_scroll.dart';
+import 'scene_clock.dart';
 
-/// The provider's own value changes only with the bodies, so a painter
-/// listens to the listenable, which a ticker sets each frame.
+/// The provider changes only with the layout, so a painter listens to the
+/// listenable, which the clock and the scroll set.
 final frameSnapshotListenableProvider =
     Provider.autoDispose<ValueListenable<FrameSnapshot>>((ref) {
+      final clock = ref.watch(sceneClockProvider);
+      final scroll = ref.watch(pageScrollControllerProvider);
+      final script = ref.watch(scrollScriptProvider);
+      final screen = ref.watch(sceneScreenProvider);
       final bodiesInPageOrder = ref.watch(bodiesInPageOrderProvider);
-      var layout = ref.read(sceneLayoutProvider);
 
-      FrameSnapshot frameAt(double actualTime) => FrameSnapshot.of(
-        bodiesInPageOrder,
-        actualTime: actualTime,
-        orbitTime: 0,
-        spinTime: 0,
-        screen: layout.screen,
-        camera: layout.landingCamera,
-      );
-
-      final currentFrame = ValueNotifier(frameAt(0));
-      // Listened to, not watched: a rebuild of this provider would start
-      // the actual time again from zero.
-      ref.listen(sceneLayoutProvider, (_, newLayout) {
-        layout = newLayout;
-        currentFrame.value = frameAt(currentFrame.value.actualTime);
-      });
-      // A ticker counts from zero each time it starts.
-      var actualTimeAtTickerStart = 0.0;
-      final ticker = Ticker((sinceStart) {
-        currentFrame.value = frameAt(
-          actualTimeAtTickerStart + sinceStart.inFractionalSeconds,
+      FrameSnapshot currentSnapshot() {
+        final SceneTime(:actualTime, :spinDrift) = clock.value;
+        // Before the page lays out, the script holds at the Landing.
+        final scrollOffset = scroll.hasClients ? scroll.offset : 0.0;
+        final clocks = Clocks(
+          scrollTime: script.scrollTimeAt(scrollOffset),
+          spinDrift: spinDrift,
         );
-      });
-      ref.listen(isSceneRunningProvider, fireImmediately: true, (_, isRunning) {
-        if (isRunning && !ticker.isActive) {
-          actualTimeAtTickerStart = currentFrame.value.actualTime;
-          ticker.start();
-        } else if (!isRunning && ticker.isActive) {
-          ticker.stop();
-        }
-      });
+        return FrameSnapshot.of(
+          bodiesInPageOrder,
+          actualTime: actualTime,
+          orbitTime: clocks.orbitTime,
+          spinTime: clocks.spinTime,
+          screen: screen,
+          camera: script.cameraAt(scrollOffset, clocks.orbitTime),
+        );
+      }
+
+      final currentFrame = ValueNotifier(currentSnapshot());
+      void showNewFrame() => currentFrame.value = currentSnapshot();
+
+      final changes = Listenable.merge([clock, scroll]);
+      changes.addListener(showNewFrame);
       ref.onDispose(() {
-        ticker.dispose();
+        changes.removeListener(showNewFrame);
         currentFrame.dispose();
       });
       return currentFrame;
     });
-
-extension _FractionalSeconds on Duration {
-  double get inFractionalSeconds =>
-      inMicroseconds / Duration.microsecondsPerSecond;
-}

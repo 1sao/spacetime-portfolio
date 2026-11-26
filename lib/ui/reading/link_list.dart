@@ -18,12 +18,10 @@ class LinkList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final style = context.type.listLabel;
-    final isExpanded = ref.watch(
-      windowSizeProvider.select(
-        (window) => window.widthClass == WidthClass.expanded,
-      ),
+    final layout = ref.watch(
+      windowSizeProvider.select((window) => window.widthClass.sectionLayout),
     );
-    return isExpanded
+    return layout == SectionLayout.panel
         ? _LinkTable(items, termStyle: style)
         : _StackedLinks(items, termStyle: style);
   }

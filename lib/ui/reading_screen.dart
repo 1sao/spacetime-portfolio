@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -5,7 +8,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../content/content.dart';
 import '../providers.dart';
-import '../scene/opaque_surface.dart';
+import '../scene/framing/reading_screen_geometry.dart';
+import '../scene/render/opaque_surface.dart';
+import '../viewport/reading_panel.dart';
 import '../viewport/window_size.dart';
 import 'colors.dart';
 import 'corners.dart';
@@ -20,18 +25,21 @@ import 'sections/work_section.dart';
 import 'spacing.dart';
 
 class ReadingScreen extends HookConsumerWidget {
-  const ReadingScreen({super.key, required this.opaqueSurfaces});
+  const ReadingScreen({
+    super.key,
+    required this.opaqueSurfaces,
+    required this.pageHeight,
+  });
 
   final OpaqueSurfaceRegistry opaqueSurfaces;
 
-  static double panelLeft(double windowWidth) =>
-      SiteSpacing.gutter + (0.02 * windowWidth).clamp(0.0, 32.0);
+  /// The page measures itself again when it changes.
+  final ValueListenable<double?> pageHeight;
 
-  static double panelWidth(double windowWidth) =>
-      (0.56 * windowWidth).clamp(470.0, 860.0);
-
-  static double landingPeekHeight(WidthClass widthClass) =>
-      widthClass == WidthClass.expanded ? 116 : 92;
+  static double landingPeekHeight(SectionLayout layout) => switch (layout) {
+    SectionLayout.panel => 116,
+    SectionLayout.cards => 92,
+  };
 
   static const _riseHeight = 6.0;
   static const _aboutMargin = 40.0;
@@ -52,6 +60,46 @@ class ReadingScreen extends HookConsumerWidget {
     );
     final isMotionReduced = MediaQuery.disableAnimationsOf(context);
 
+    // The scroll offsets at which [section]'s top and bottom reach the top
+    // of the view, without the lift that a hover gives the reading screen.
+    SectionSpan spanOf(SectionId section) {
+      final box =
+          sectionKeys[section]!.currentContext!.findRenderObject()!
+              as RenderBox;
+      final top =
+          RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset +
+          rise.value;
+      return (top: top, bottom: top + box.size.height);
+    }
+
+    final geometryNotifier = ref.read(
+      measuredReadingScreenGeometryProvider.notifier,
+    );
+    void measurePage() {
+      if (!context.mounted) return;
+      geometryNotifier.geometry = ReadingScreenGeometry(
+        sections: [
+          for (final section in ref.read(sectionsProvider)) spanOf(section.id),
+        ],
+        // As with the address bar hidden, so the track stays put when the
+        // bar moves.
+        maxScroll: math.max(
+          0,
+          scroll.maxScrollExtent +
+              scroll.viewportDimension -
+              window.largeHeight,
+        ),
+      );
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => measurePage());
+    // Without a page, the frame loop has no scroll to read.
+    useEffect(() => geometryNotifier.clear, const []);
+    useEffect(() {
+      pageHeight.addListener(measurePage);
+      return () => pageHeight.removeListener(measurePage);
+    }, [pageHeight, window]);
+
     void riseTo(double target) =>
         rise.animateTo(target, curve: Curves.easeOutExpo);
 
@@ -62,13 +110,7 @@ class ReadingScreen extends HookConsumerWidget {
     }, [isLanding]);
 
     void scrollToAbout() {
-      final about = sectionKeys[SectionId.about]!.currentContext!
-          .findRenderObject()!;
-      // The risen screen drops back once the page scrolls, and About with it.
-      final target =
-          RenderAbstractViewport.of(about).getOffsetToReveal(about, 0).offset +
-          rise.value -
-          _aboutMargin;
+      final target = spanOf(SectionId.about).top - _aboutMargin;
       // Unlike other animations, a scroll does not shorten with reduced motion.
       if (isMotionReduced) {
         scroll.jumpTo(target);
@@ -96,7 +138,7 @@ class ReadingScreen extends HookConsumerWidget {
       builder: (context, child) =>
           Transform.translate(offset: Offset(0, -rise.value), child: child),
       child: RepaintBoundary(
-        child: window.widthClass == WidthClass.expanded
+        child: window.widthClass.sectionLayout == SectionLayout.panel
             ? _Panel(
                 window: window,
                 sections: sections,
@@ -132,7 +174,7 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.only(
-      left: ReadingScreen.panelLeft(window.width),
+      left: ReadingPanel.of(window.width).left,
       bottom: SiteSpacing.gutter,
     ),
     child: Align(
@@ -142,7 +184,7 @@ class _Panel extends StatelessWidget {
         child: _EnamelSurface(
           opaqueSurfaceRegistry: opaqueSurfaces,
           borderRadius: SiteCorners.screen,
-          width: ReadingScreen.panelWidth(window.width),
+          width: ReadingPanel.of(window.width).width,
           padding: const EdgeInsets.fromLTRB(
             SiteSpacing.readerPad,
             30,
@@ -288,5 +330,7 @@ extension on SectionId {
 }
 
 @PagePreview('ReadingScreen')
-Widget readingScreenPreview() =>
-    ReadingScreen(opaqueSurfaces: OpaqueSurfaceRegistry());
+Widget readingScreenPreview() => ReadingScreen(
+  opaqueSurfaces: OpaqueSurfaceRegistry(),
+  pageHeight: ValueNotifier(null),
+);

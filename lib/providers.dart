@@ -2,8 +2,8 @@ import 'package:riverpod/riverpod.dart';
 
 import 'content/content.dart';
 import 'content/site_content.dart';
-import 'space/body.dart';
-import 'space/system.dart';
+import 'space/system/body.dart';
+import 'space/system/system.dart';
 
 final sectionsProvider = Provider<List<Section>>((ref) => sections);
 

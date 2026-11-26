@@ -30,6 +30,9 @@ class EnamelDecoration extends Decoration {
     offset: Offset(0, 2),
   );
 
+  // TODO: The first well on the screen costs one frame of 15 to 28 ms,
+  // while the GPU sets up the blur. Remove the shadow, or draw one well
+  // under the scene while the app is idle.
   static const _wellShadow = BoxShadow(
     color: Color(0x80000000),
     offset: Offset(0, 3),

@@ -12,8 +12,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spacetime_portfolio/app.dart';
+import 'package:spacetime_portfolio/scene/page_scroll.dart';
+import 'package:spacetime_portfolio/scene/render/scene_assets.dart';
 import 'package:spacetime_portfolio/scene/scene_running.dart';
-import 'package:spacetime_portfolio/scene/scene_view.dart';
+import 'package:spacetime_portfolio/scene/softness.dart';
 import 'package:web/web.dart' as web;
 
 import 'src/frame_recorder.dart';
@@ -145,6 +147,7 @@ class _Tour {
     _downloadedBytesToScene = _downloadedBytes;
     await SchedulerBinding.instance.endOfFrames(_warmUpFrames);
     await _measure('Landing');
+    await _measureScroll();
 
     final softness = _container.read(sceneSoftnessProvider);
     softness.value = SceneSoftness.soft;
@@ -159,6 +162,24 @@ class _Tour {
     _recorder.startSegment(segment);
     await Future<void>.delayed(_dwell);
     _recorder.stop();
+  }
+
+  /// Scrolls from top to bottom at a steady rate.
+  Future<void> _measureScroll() async {
+    const segment = 'Scroll';
+    if (!(_segments?.contains(segment) ?? true)) return;
+    final scroll = _container.read(pageScrollControllerProvider);
+    final maxScroll = scroll.position.maxScrollExtent;
+    _recorder.startSegment(segment);
+    final sinceStart = Stopwatch()..start();
+    while (sinceStart.elapsed < _dwell) {
+      scroll.jumpTo(
+        maxScroll * sinceStart.elapsedMicroseconds / _dwell.inMicroseconds,
+      );
+      await SchedulerBinding.instance.endOfFrame;
+    }
+    _recorder.stop();
+    scroll.jumpTo(0);
   }
 
   /// A read on its own WebGL context waits for the GPU work that the page's

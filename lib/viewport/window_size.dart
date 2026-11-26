@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_address_bar/web_address_bar.dart';
 
+import 'binding_observer.dart';
 import 'browser_viewport.dart'
     if (dart.library.js_interop) 'browser_viewport_web.dart';
 
@@ -49,7 +50,23 @@ enum WidthClass {
     < 840 => medium,
     _ => expanded,
   };
+
+  LandingNavigationOrientation get landingNavigationOrientation =>
+      this == compact
+      ? LandingNavigationOrientation.vertical
+      : LandingNavigationOrientation.horizontal;
+
+  SectionLayout get sectionLayout =>
+      this == expanded ? SectionLayout.panel : SectionLayout.cards;
 }
+
+/// How the Landing lines up the hole and the bodies, which lead to the
+/// sections. On a phone held upright, a column leaves the bodies larger.
+enum LandingNavigationOrientation { horizontal, vertical }
+
+/// How the reading screen shows the sections: in a panel beside the scene,
+/// or as cards across the window.
+enum SectionLayout { panel, cards }
 
 final windowSizeProvider = NotifierProvider<WindowSizeNotifier, WindowSize>(
   WindowSizeNotifier.new,
@@ -59,8 +76,7 @@ class WindowSizeNotifier extends Notifier<WindowSize>
     with WidgetsBindingObserver {
   @override
   WindowSize build() {
-    WidgetsBinding.instance.addObserver(this);
-    ref.onDispose(() => WidgetsBinding.instance.removeObserver(this));
+    ref.observeBinding(this);
     return _measure();
   }
 

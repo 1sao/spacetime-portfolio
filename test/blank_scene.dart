@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import 'package:spacetime_portfolio/scene/hole_textures.dart';
-import 'package:spacetime_portfolio/scene/sky_cache.dart';
+import 'package:spacetime_portfolio/scene/render/hole_textures.dart';
+import 'package:spacetime_portfolio/scene/render/sky_cache.dart';
 
 class BlankHoleTextures implements HoleTextures {
   @override

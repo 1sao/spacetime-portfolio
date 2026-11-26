@@ -1,6 +1,7 @@
 # spacetime_portfolio
 
-A portfolio as one scrolling page over a live star system, built with Flutter for the web.
+A portfolio as one scrolling page over a live star system, built with
+Flutter for the web.
 
 `docs/architecture.md` explains how the site is put together and why.
 
@@ -9,10 +10,10 @@ A portfolio as one scrolling page over a live star system, built with Flutter fo
 Needs Flutter 3.50 or later.
 
 ```sh
-flutter run -d chrome                  # serve the site locally and open it in Chrome
+flutter run -d chrome                  # serve the site and open Chrome
 flutter build web --wasm               # build the site into build/web
 flutter test                           # run the tests
-dart run tool/measure_performance.dart # time the site's start-up and frames in Chrome
+dart run tool/measure_performance.dart # time start-up and frames in Chrome
 ```
 
 A build with `--wasm` holds the site twice, compiled to WebAssembly and

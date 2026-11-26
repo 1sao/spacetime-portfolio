@@ -17,6 +17,6 @@ abstract final class SiteCorners {
   /// A section's card on phones.
   static const cardPhone = BorderRadius.all(Radius.circular(12));
 
-  /// The focus outline round a body title.
+  /// The focus outline around a body title.
   static const titleFocus = BorderRadius.all(Radius.circular(14));
 }

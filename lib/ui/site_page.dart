@@ -4,7 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../debug/fps_counter.dart';
-import '../scene/opaque_surface.dart';
+import '../scene/page_scroll.dart';
+import '../scene/render/opaque_surface.dart';
 import '../scene/scene_view.dart';
 import '../viewport/window_size.dart';
 import 'landing.dart';
@@ -19,6 +20,7 @@ class SitePage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final window = ref.watch(windowSizeProvider);
     final opaqueSurfaces = useMemoized(OpaqueSurfaceRegistry.new);
+    final pageHeight = useValueNotifier<double?>(null);
     return Scaffold(
       body: Stack(
         children: [
@@ -29,12 +31,25 @@ class SitePage extends HookConsumerWidget {
             height: window.largeHeight,
             child: SceneView(opaqueSurfaces: opaqueSurfaces),
           ),
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                const Landing(),
-                ReadingScreen(opaqueSurfaces: opaqueSurfaces),
-              ],
+          NotificationListener<ScrollMetricsNotification>(
+            onNotification: (notification) {
+              if (notification.depth > 0) return false;
+              final metrics = notification.metrics;
+              pageHeight.value =
+                  metrics.maxScrollExtent + metrics.viewportDimension;
+              return false;
+            },
+            child: SingleChildScrollView(
+              controller: ref.watch(pageScrollControllerProvider),
+              child: Column(
+                children: [
+                  const Landing(),
+                  ReadingScreen(
+                    opaqueSurfaces: opaqueSurfaces,
+                    pageHeight: pageHeight,
+                  ),
+                ],
+              ),
             ),
           ),
           if (kDebugMode)

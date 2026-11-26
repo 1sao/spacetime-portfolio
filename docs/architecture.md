@@ -20,11 +20,12 @@ Credits, which frames the hole.
   never does.
 
 This document describes the design that the code is built toward. Today the
-scene shows the Landing with the planets and the hole, the clocks stand at
-0, and the page has the intro (the owner's name, role and welcome line
-on the Landing), the reading screen, and the peek (the top of the reading
-screen, under the Landing). The page scrolls over the scene, but scroll,
-drag, titles and URL fragments do not yet move the scene.
+page has the intro (the owner's name, role and welcome line on the
+Landing), the reading screen, and the peek (the top of the reading screen,
+under the Landing). The scroll moves the camera from the Landing to each
+section's body and the hole, and sets the clocks (see "Scroll"). The
+camera follows the page at once, with no glide. Drag, titles and URL
+fragments do not yet move the scene.
 
 ## Rendering
 
@@ -51,15 +52,18 @@ drag, titles and URL fragments do not yet move the scene.
   is then drawn in full.
 - **Framing:** in addition to its position and target, a camera has the
   point of the screen where its target lands, a roll and a focal length.
-  `SceneLayout`, in `scene/`, gives these three for the scene's size, with
-  Material 3's window size classes. Under 600 px wide, the Landing's line
-  of bodies stands upright, with a quarter turn of roll. The page gives
-  the layout a floor, which is the room for the body titles above the top
-  of the intro. The Landing's line moves up until the hole and the bodies
-  are above the floor, but no higher than the top of the screen. The sky's
-  set of directions is made for the shortest focal length of the layout,
-  so that every star gets a pixel in every framing, and the sky is not
-  baked again when the camera moves between framings.
+  `scene/framing/` gives these three for the scene's size. Material 3's
+  window size classes set two choices, which the page uses too: the
+  orientation of the Landing's navigation, and whether the sections are
+  in a panel or on cards. Under 600 px wide, the Landing's line of bodies
+  stands upright, with a quarter turn of roll.
+  The page gives the Landing a floor, which is the room for the body
+  titles above the top of the intro. The Landing's line moves up until
+  the hole and the bodies are above the floor, but no higher than the top
+  of the screen. The sky's set of directions is made for the shortest
+  focal length of the framings, so that every star gets a pixel in every
+  framing, and the sky is not baked again when the camera moves between
+  framings.
 - **Overlays are Flutter widgets,** such as the body titles and their
   leaders, placed by the CPU projection. It does not bend rays: the design
   keeps the bodies that have titles out of the region where the hole's
@@ -78,19 +82,30 @@ drag, titles and URL fragments do not yet move the scene.
 lib/
   content/     the sections' ids, titles and descriptors, and the credits:
                data only
-  space/       pure Dart: the system (orbits, bodies and their looks), the
-               camera, projection, pick, the per-frame snapshot
-  scene/       the frame loop, the framing for the screen's size, the
-               shader wrapper with its typed uniform layout, the look of
-               the hole and its light
+  space/       pure Dart: the two clocks, the per-frame snapshot
+    system/    the system: orbits, bodies and their looks
+    camera/    the camera, projection and pick, and the vector math
+               of aiming and turning it
+    station/   the places where the camera holds, and their framing
+    scroll/    the script of holds and moves over the scroll, and the
+               routes between the stations
+  scene/       the frame loop, the scene's widget and its softness, the
+               page's scroll controller, and whether the scene runs
+    framing/   the providers that build the scroll script from the
+               screen's size and the page's measurements, one file
+               each, with the framings they use
+    render/    the shader wrapper with its typed uniform layout, its
+               textures, the look of the hole and its light, and the
+               parts of the screen that the page hides
   ui/          the page: the Landing, the reading screen, the colors and
                the type
     sections/  one widget for each section, with its text
     reading/   the pieces that the sections are built from: headings,
                entries, paragraphs, wells, links
-  viewport/    the window's width and its width class, and its height
-               with the address bar shown and hidden, measured in the
-               browser
+  viewport/    the window's width and its width class, its height with
+               the address bar shown and hidden, measured in the
+               browser, where the reading panel lies, and the
+               reduced-motion setting
   debug/       debug tools, kept apart from the rest
   router.dart  the routes
   providers.dart
@@ -129,11 +144,35 @@ can use them.
      target pixel from Dart, so the look-at math and the roll exist only
      once.
 3. **Content is separate from looks.** A section's text is in its widget,
-   and its id, title and descriptor are in `content/`. Where its body orbits and how it
-   is drawn are settings, keyed by section id, so reordering the sections
-   does not move the bodies.
+   and its id, title and descriptor are in `content/`. Where its body
+   orbits and how it is drawn are settings, keyed by section id, so
+   reordering the sections does not move the bodies.
 4. **Camera and time behavior are unit-tested in pure Dart,** in `space/`,
    with no widgets.
+
+## Structure
+
+- **Providers connect; plain Dart computes.** A provider reads its inputs
+  and calls a constructor or a function. Each provider is at the top of
+  its own file, with the types and functions that only it uses. `space/`
+  imports no Riverpod, so the provider of a `space/` type, such as
+  `scrollScriptProvider`, has a file of its own in `scene/`.
+- **A description, then each frame.** Values that change with the
+  layout, such as the stations and the scroll script, are immutable.
+  Providers build them again when the layout changes. Each frame, the
+  frame loop applies the scroll offset and the time to them. The frame
+  loop is the only place where the scene's state changes.
+- **A choice is a type.** A choice between layouts is an enum, or a
+  sealed class with a factory, not a boolean. The width class gives the
+  choices that the page and the scene share: `sectionLayout` and
+  `landingNavigationOrientation`.
+- **A class has one job.** `SectionFraming` gives where each section's
+  station shows its subject; `sectionStationsFor` builds the stations.
+- **Vector math is in `space/camera/`,** as named functions. The station
+  and scroll code calls them, and has no vector math of its own.
+- **Measured values say so.** A value that a widget measures after
+  layout, and that the scene reads, is a provider whose name starts with
+  `measured`.
 
 ## Libraries and state
 
@@ -163,12 +202,20 @@ can use them.
   A widget that needs listeners or animation controllers uses
   `flutter_hooks`, through `hooks_riverpod`'s `HookConsumerWidget`. The
   type styles are a `ThemeExtension` in the theme.
-- **Per-frame values are not Riverpod state.** A provider owns the ticker
-  and exposes a `ValueListenable<FrameSnapshot>` that painters repaint
-  from. The scene reads inputs that change every frame, such as the scroll
-  offset, directly at each tick.
+- **Per-frame values are not Riverpod state.** The clock's provider owns
+  the ticker and exposes the time as a `ValueListenable`, which runs on
+  when the layout changes. The frame's provider builds again with the
+  layout, and exposes a `ValueListenable<FrameSnapshot>` that painters
+  repaint from. It reads the scroll offset directly at each tick and at
+  each scroll.
 - **The scene stands still** while the app is not resumed: on the web,
-  while the window has no focus or the tab is hidden.
+  while the window has no focus or the tab is hidden. The ticker stops,
+  but a scroll still moves the camera and the clocks, because a window
+  without focus can still be scrolled.
+- **The reading screen measures itself** after it builds and whenever
+  the page height changes, and gives the scene its sections' scroll
+  offsets and the page's largest scroll offset, as with the address bar
+  hidden, so the stations stay put when the bar moves.
 - **The address bar hides on phones.** `web_address_bar` lets a phone's
   browser hide its address bar as the page scrolls, so the window's height
   changes during a scroll. The scene is as tall as the window with the bar
@@ -178,6 +225,26 @@ can use them.
 - **Vectors:** `vector_math_64`. Azimuth 0 points along +z. A camera that
   does not roll has forward × world up as its right; a roll turns right and
   up about forward.
+
+## Scroll
+
+The scroll offset sets the camera and the orbit time, so a scroll back up
+shows the system as it was.
+
+- **Stations.** The camera holds at a row of stations: the Landing, then
+  one for each section. Between two holds it moves, while the next
+  section comes up the view. Holds are short, so the camera nearly
+  always moves while the page scrolls. A link to a section lands while
+  its station holds.
+- **What each station frames.** The Landing shows the whole system.
+  Beside the reading panel, a body's station shows its body, with part
+  of the hole behind it at the panel's edge. On phones it shows the body
+  in the gap above the section's card, and the body scrolls with the
+  gap. Credits frames the hole.
+- **Moves** go around the hole and keep it in view.
+- **Time.** While a station holds, the orbit time runs on slowly with the
+  scroll; during a move, it runs on by a fixed amount. Spin time also
+  runs with the seconds, so a visitor who waits sees the bodies turn.
 
 ## Routing
 

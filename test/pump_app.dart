@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:spacetime_portfolio/app.dart';
 import 'package:spacetime_portfolio/router.dart';
-import 'package:spacetime_portfolio/scene/kepler_textures.dart';
+import 'package:spacetime_portfolio/scene/render/kepler_textures.dart';
+import 'package:spacetime_portfolio/scene/render/scene_assets.dart';
 import 'package:spacetime_portfolio/scene/scene_running.dart';
-import 'package:spacetime_portfolio/scene/scene_view.dart';
 
 import 'blank_scene.dart';
 import 'fake_bodies.dart';

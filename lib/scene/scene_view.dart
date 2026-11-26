@@ -1,129 +1,16 @@
-import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers.dart';
 import '../space/frame_snapshot.dart';
 import 'frame_loop.dart';
-import 'hole_textures.dart';
-import 'kepler_textures.dart';
-import 'looks.dart';
-import 'opaque_surface.dart';
-import 'scene_layout_provider.dart';
+import 'framing/focal_lengths.dart';
+import 'render/opaque_surface.dart';
+import 'render/scene_assets.dart';
+import 'render/scene_shader.dart';
+import 'render/visible_rects.dart';
 import 'scene_running.dart';
-import 'scene_shader.dart';
-import 'sky_cache.dart';
-import 'visible_rects.dart';
-
-const sceneShaderAsset = 'shaders/scene.frag';
-
-/// The scene shader's program and the textures it reads, made once.
-class SceneAssets {
-  const SceneAssets(
-    this.program,
-    this.keplerTextures,
-    this.holeTextures,
-    this.skyCache,
-  );
-
-  final FragmentProgram program;
-  final KeplerTextures keplerTextures;
-  final HoleTextures holeTextures;
-  final SkyCache skyCache;
-}
-
-final sceneAssetsProvider = FutureProvider<SceneAssets>((ref) async {
-  final hole = ref.watch(looksProvider.select((looks) => looks.hole));
-  final (program, keplerProgram, holeProgram, skyProgram) = await (
-    FragmentProgram.fromAsset(sceneShaderAsset),
-    FragmentProgram.fromAsset(keplerTexturesAsset),
-    FragmentProgram.fromAsset(holeTexturesAsset),
-    FragmentProgram.fromAsset(skyCacheAsset),
-  ).wait;
-  // The provider can be gone by the time the programs have loaded.
-  if (!ref.mounted) throw StateError('The scene went while it loaded.');
-  final keplerTextures = KeplerTextures.bake(keplerProgram);
-  ref.onDispose(keplerTextures.dispose);
-  final holeTextures = HoleTextures.bake(holeProgram, hole);
-  ref.onDispose(holeTextures.dispose);
-  final skyCache = SkyCache(skyProgram);
-  ref.onDispose(skyCache.dispose);
-  return SceneAssets(program, keplerTextures, holeTextures, skyCache);
-});
-
-final sceneShaderProvider = Provider.autoDispose<AsyncValue<SceneShader>>((
-  ref,
-) {
-  final looks = ref.watch(looksProvider);
-  final bodies = ref.watch(bodiesInPageOrderProvider);
-  return ref.watch(sceneAssetsProvider).whenData((assets) {
-    final shader = SceneShader(
-      assets.program,
-      looks,
-      bodies: [for (final body in bodies) body.look],
-      keplerTextures: assets.keplerTextures,
-      holeTextures: assets.holeTextures,
-      skyCache: assets.skyCache,
-    );
-    ref.onDispose(shader.dispose);
-    return shader;
-  });
-});
-
-/// A soft scene is drawn small, blurred and scaled up. It costs far less
-/// to draw, and the blur hides its low resolution.
-@immutable
-class SceneSoftness {
-  const SceneSoftness({this.scale = 1, this.blur = 0})
-    : assert(scale > 0 && scale <= 1 && blur >= 0);
-
-  static const sharp = SceneSoftness();
-
-  static const soft = SceneSoftness(scale: 0.25, blur: 1.5);
-
-  /// The drawn scene's logical pixels for each logical pixel of the window.
-  final double scale;
-
-  /// The blur's sigma, in the drawn scene's logical pixels.
-  final double blur;
-
-  bool get isSharp => scale == 1 && blur == 0;
-
-  /// The blur reads past the edge of what is drawn; the border keeps that
-  /// edge out of the window.
-  double get border => isSharp ? 0 : (3 * blur).ceilToDouble() + 1;
-
-  @override
-  bool operator ==(Object other) =>
-      other is SceneSoftness && other.scale == scale && other.blur == blur;
-
-  @override
-  int get hashCode => Object.hash(scale, blur);
-}
-
-extension SoftSceneRect on Rect {
-  /// Maps this rectangle from the scene's logical pixels to those of the
-  /// scene drawn with [softness], smaller by its border on each side: the
-  /// blur reads that far into it.
-  Rect offset(SceneSoftness softness) {
-    final SceneSoftness(:scale, :border) = softness;
-    return (topLeft * scale & size * scale)
-        .shift(Offset(border, border))
-        .deflate(border);
-  }
-}
-
-final sceneSoftnessProvider = Provider<ValueNotifier<SceneSoftness>>((ref) {
-  final softness = ValueNotifier(
-    const bool.fromEnvironment('SOFT_SCENE')
-        ? SceneSoftness.soft
-        : SceneSoftness.sharp,
-  );
-  ref.onDispose(softness.dispose);
-  return softness;
-});
+import 'softness.dart';
 
 class SceneView extends ConsumerWidget {
   const SceneView({super.key, required this.opaqueSurfaces});
@@ -138,15 +25,15 @@ class SceneView extends ConsumerWidget {
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     final softness = ref.watch(sceneSoftnessProvider);
     final skyFocalLength = ref.watch(
-      sceneLayoutProvider.select((layout) => layout.skyFocalLength),
+      focalLengthsProvider.select((focalLengths) => focalLengths.sky),
     );
     return switch (ref.watch(sceneShaderProvider)) {
       AsyncData(value: final shader) => RepaintBoundary(
         child: ValueListenableBuilder(
           valueListenable: softness,
-          builder: (_, softness, _) => _softLayer(
-            softness,
-            CustomPaint(
+          builder: (_, softness, _) => SoftLayer(
+            softness: softness,
+            child: CustomPaint(
               size: Size.infinite,
               painter: _ScenePainter(
                 shader,
@@ -168,30 +55,6 @@ class SceneView extends ConsumerWidget {
         stackTrace,
       ),
     };
-  }
-
-  Widget _softLayer(SceneSoftness softness, Widget child) {
-    final SceneSoftness(:scale, :blur, :border) = softness;
-    final enlargement = 1 / scale;
-    final shift = -border * enlargement;
-    final matrix = Matrix4.identity()
-      ..translateByDouble(shift, shift, 0, 1)
-      ..scaleByDouble(enlargement, enlargement, 1, 1);
-    return ImageFiltered(
-      enabled: !softness.isSharp,
-      imageFilter: ImageFilter.compose(
-        outer: ImageFilter.matrix(
-          matrix.storage,
-          filterQuality: FilterQuality.low,
-        ),
-        inner: ImageFilter.blur(
-          sigmaX: blur,
-          sigmaY: blur,
-          tileMode: TileMode.clamp,
-        ),
-      ),
-      child: child,
-    );
   }
 }
 
